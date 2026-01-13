@@ -2,7 +2,7 @@
 
 O **LinkHub** é uma aplicação web moderna para organizar e acessar links favoritos de forma visual, utilizando cards interativos e persistência de dados em tempo real.
 
-## 🚀 Funcionalidades
+## 🚀 Funcionalidades Atuais
 
 - **Autenticação Segura**: Login via E-mail ou Visitante (Firebase Auth).
 - **CRUD Completo**: Criação, leitura, edição e exclusão de links.
@@ -17,7 +17,7 @@ O **LinkHub** é uma aplicação web moderna para organizar e acessar links favo
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Firebase](https://firebase.google.com/) (Auth & Firestore)
 - [Lucide React](https://lucide.dev/) (Ícones)
-- [dnd-kit](https://dndkit.com/) (Futura implementação de Drag & Drop)
+- [dnd-kit](https://dndkit.com/) (Drag & Drop)
 
 ## 📦 Como Rodar o Projeto
 
