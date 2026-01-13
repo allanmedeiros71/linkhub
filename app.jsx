@@ -1,42 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithCustomToken,
-  signOut,
-} from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  serverTimestamp,
-} from "firebase/firestore";
-
-// Importações para o Drag and Drop
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
 import {
   Plus,
   LogOut,
@@ -47,370 +9,362 @@ import {
   Link as LinkIcon,
   Search,
   X,
-  Github,
   Chrome,
+  Github,
+  AlertCircle,
 } from "lucide-react";
 
-// --- CONFIGURAÇÃO FIREBASE ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId =
-  typeof __app_id !== "undefined" ? __app_id : "link-manager-default";
+// Endereço da API backend (Certifique-se de que o servidor Node.js está a correr na porta 5000)
+const API_URL = "http://localhost:5000/api";
 
-// --- COMPONENTE DE CARD ORDENÁVEL ---
-function SortableCard({ link, onEdit, onDelete }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: link.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : "auto",
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="group bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:shadow-xl transition-all duration-300 relative"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="bg-slate-50 p-3 rounded-2xl group-hover:bg-blue-50 transition-colors border border-slate-100">
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${link.url}&sz=64`}
-            alt="favicon"
-            className="w-7 h-7"
-            onError={(e) => {
-              e.target.src =
-                "https://cdn-icons-png.flaticon.com/512/1006/1006771.png";
-            }}
-          />
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(link)}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(link.id)}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <h3 className="font-bold text-slate-800 line-clamp-1 mb-1">
-        {link.title}
-      </h3>
-      <p className="text-xs text-slate-400 truncate mb-6">{link.url}</p>
-
-      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-        {/* Alça de Arrastar (Drag Handle) */}
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-2 text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing"
-          title="Arrastar para reordenar"
-        >
-          <GripVertical className="w-5 h-5" />
-        </button>
-
-        <a
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700"
-        >
-          Acessar <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-// --- APLICAÇÃO PRINCIPAL ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [links, setLinks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Configuração de Sensores para Drag and Drop
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
+  // Carregar links quando o utilizador faz login
   useEffect(() => {
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const linksCol = collection(
-      db,
-      "artifacts",
-      appId,
-      "users",
-      user.uid,
-      "links"
-    );
-    return onSnapshot(linksCol, (snapshot) => {
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setLinks(data.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)));
-    });
+    if (user) {
+      fetchLinks();
+    }
   }, [user]);
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const payload = {
-      title: f.get("title"),
-      url: f.get("url"),
-      updatedAt: serverTimestamp(),
-    };
+  // Função para procurar os links no servidor
+  const fetchLinks = async () => {
+    setError(null);
     try {
-      if (editingLink) {
-        await updateDoc(
-          doc(
-            db,
-            "artifacts",
-            appId,
-            "users",
-            user.uid,
-            "links",
-            editingLink.id
-          ),
-          payload
-        );
-      } else {
-        await addDoc(
-          collection(db, "artifacts", appId, "users", user.uid, "links"),
-          {
-            ...payload,
-            orderIndex: links.length,
-            createdAt: serverTimestamp(),
-          }
-        );
-      }
+      const response = await fetch(`${API_URL}/links/${user.id}`);
+      if (!response.ok) throw new Error("Erro ao carregar links do servidor.");
+      const data = await response.json();
+      setLinks(data);
+    } catch (err) {
+      console.error("Erro ao procurar links:", err);
+      setError(
+        "Não foi possível ligar ao servidor. Verifique se o backend está ativo."
+      );
+    }
+  };
+
+  // Função para lidar com o login (com tratamento de erro de rede)
+  const handleLogin = async (email) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) throw new Error("Falha na autenticação.");
+
+      const userData = await response.json();
+      setUser(userData);
+    } catch (err) {
+      console.error("Erro no login:", err);
+      setError(
+        "Erro de ligação: O servidor backend não responde. Execute 'npm run server' no terminal."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para guardar ou atualizar um link
+  const handleSaveLink = async (e) => {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.target);
+    const linkData = {
+      user_id: user.id,
+      title: formData.get("title"),
+      url: formData.get("url"),
+      order_index: editingLink ? editingLink.order_index : links.length,
+    };
+
+    const method = editingLink ? "PUT" : "POST";
+    const url = editingLink
+      ? `${API_URL}/links/${editingLink.id}`
+      : `${API_URL}/links`;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(linkData),
+      });
+
+      if (!response.ok) throw new Error("Erro ao guardar o link.");
+
       setIsModalOpen(false);
       setEditingLink(null);
+      fetchLinks(); // Recarregar a lista após sucesso
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao guardar:", err);
+      setError("Falha ao comunicar com o servidor para guardar o link.");
     }
   };
 
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-    if (active.id !== over.id) {
-      const oldIndex = links.findIndex((l) => l.id === active.id);
-      const newIndex = links.findIndex((l) => l.id === over.id);
-      const newOrder = arrayMove(links, oldIndex, newIndex);
-
-      setLinks(newOrder); // Update local imediato
-
-      // Persistir no Firestore
-      try {
-        const promises = newOrder.map((link, i) =>
-          updateDoc(
-            doc(db, "artifacts", appId, "users", user.uid, "links", link.id),
-            { orderIndex: i }
-          )
-        );
-        await Promise.all(promises);
-      } catch (err) {
-        console.error("Erro ao salvar ordem:", err);
-      }
+  // Função para apagar um link
+  const handleDelete = async (id) => {
+    if (!window.confirm("Deseja mesmo eliminar este link?")) return;
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/links/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Erro ao eliminar link.");
+      fetchLinks();
+    } catch (err) {
+      console.error("Erro ao eliminar:", err);
+      setError("Erro ao tentar eliminar o link no servidor.");
     }
   };
 
-  if (loading)
+  // Ecrã de Login
+  if (!user)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white p-12 rounded-[3rem] shadow-2xl max-w-md w-full text-center">
+          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200">
+            <LinkIcon className="text-white" />
+          </div>
+          <h1 className="text-3xl font-black mb-2 tracking-tight">LinkHub</h1>
+          <p className="text-slate-500 mb-8">
+            Gestão de links com Postgres e Docker.
+          </p>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-left animate-in fade-in zoom-in duration-200">
+              <AlertCircle className="text-red-500 w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 font-medium leading-relaxed">
+                {error}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={() => handleLogin("visitante@teste.com")}
+            disabled={loading}
+            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {loading ? "A ligar..." : "Entrar como Visitante"}
+          </button>
+
+          <p className="mt-6 text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+            Certifique-se de que o backend está a correr
+          </p>
+        </div>
       </div>
     );
-  if (!user) return <AuthPage onGuestLogin={() => signInAnonymously(auth)} />;
 
-  const filtered = links.filter((l) =>
-    l.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLinks = links.filter(
+    (l) =>
+      l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      l.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
+      {/* Barra de Navegação */}
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-black text-xl">
-            <LinkIcon className="text-blue-600" /> LinkHub
+          <div className="flex items-center gap-2 font-black text-xl text-blue-600">
+            <LinkIcon /> <span className="text-slate-900">LinkHub</span>
           </div>
+
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Pesquisar..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              placeholder="Pesquisar nos seus links..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
           <button
-            onClick={() => signOut(auth)}
-            className="p-2 text-slate-400 hover:text-red-600"
+            onClick={() => setUser(null)}
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
           >
-            <LogOut />
+            <LogOut size={20} />
           </button>
         </div>
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 mt-8">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-between text-red-700 text-sm font-medium">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              {error}
+            </div>
+            <button
+              onClick={() => fetchLinks()}
+              className="underline hover:text-red-900 text-xs"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-slate-800">Meus Links</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Meus Links</h2>
+            <p className="text-sm text-slate-500">
+              Total: {links.length} links guardados
+            </p>
+          </div>
           <button
             onClick={() => {
               setEditingLink(null);
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 transition-transform active:scale-95"
           >
             <Plus size={20} /> Novo Link
           </button>
         </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={filtered.map((l) => l.id)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((link) => (
-                <SortableCard
-                  key={link.id}
-                  link={link}
-                  onEdit={(l) => {
-                    setEditingLink(l);
-                    setIsModalOpen(true);
-                  }}
-                  onDelete={(id) =>
-                    deleteDoc(
-                      doc(
-                        db,
-                        "artifacts",
-                        appId,
-                        "users",
-                        user.uid,
-                        "links",
-                        id
-                      )
-                    )
-                  }
-                />
-              ))}
+        {/* Grelha de Links */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredLinks.length === 0 ? (
+            <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+              <LinkIcon className="mx-auto text-slate-200 w-12 h-12 mb-4" />
+              <p className="text-slate-400 font-medium">
+                Nenhum link encontrado.
+              </p>
             </div>
-          </SortableContext>
-        </DndContext>
+          ) : (
+            filteredLinks.map((link) => (
+              <div
+                key={link.id}
+                className="group bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:shadow-xl transition-all relative overflow-hidden"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 group-hover:bg-blue-50 transition-colors">
+                    <img
+                      src={`https://www.google.com/s2/favicons?domain=${link.url}&sz=64`}
+                      className="w-6 h-6"
+                      alt="favicon"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://cdn-icons-png.flaticon.com/512/1006/1006771.png";
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingLink(link);
+                        setIsModalOpen(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(link.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="font-bold text-slate-800 mb-1 truncate">
+                  {link.title}
+                </h3>
+                <p className="text-xs text-slate-400 truncate mb-5">
+                  {link.url}
+                </p>
+
+                <div className="pt-4 border-t border-slate-50">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-50 py-2 rounded-xl transition-colors"
+                  >
+                    Acessar Link <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </main>
 
+      {/* Modal de CRUD */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <form
-            onSubmit={handleSave}
-            className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl"
+            onSubmit={handleSaveLink}
+            className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in zoom-in duration-300"
           >
-            <h2 className="font-black text-xl mb-6">
-              {editingLink ? "Editar Link" : "Novo Link"}
-            </h2>
-            <div className="space-y-4">
-              <input
-                name="title"
-                defaultValue={editingLink?.title}
-                placeholder="Título"
-                required
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                name="url"
-                defaultValue={editingLink?.url}
-                placeholder="URL (https://...)"
-                type="url"
-                required
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-black text-xl">
+                {editingLink ? "Editar Link" : "Novo Link"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:bg-slate-50 p-2 rounded-full"
+              >
+                <X size={20} />
+              </button>
             </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                  Título
+                </label>
+                <input
+                  name="title"
+                  defaultValue={editingLink?.title}
+                  placeholder="Ex: Meu Portfólio"
+                  required
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                  Endereço URL
+                </label>
+                <input
+                  name="url"
+                  defaultValue={editingLink?.url}
+                  placeholder="https://exemplo.com"
+                  type="url"
+                  required
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-4 mt-8">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="flex-1 py-4 text-slate-400 font-bold"
+                className="flex-1 py-4 text-slate-400 font-bold hover:bg-slate-50 rounded-2xl transition-all"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200"
+                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
               >
-                Salvar
+                {editingLink ? "Atualizar" : "Criar Link"}
               </button>
             </div>
           </form>
         </div>
       )}
-    </div>
-  );
-}
-
-function AuthPage({ onGuestLogin }) {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
-      <div className="bg-white rounded-[3rem] p-12 max-w-lg w-full shadow-2xl">
-        <div className="bg-blue-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-100">
-          <LinkIcon className="text-white w-10 h-10" />
-        </div>
-        <h1 className="text-4xl font-black mb-4">LinkHub</h1>
-        <p className="text-slate-500 mb-10">
-          Organize seus links favoritos com estilo.
-        </p>
-        <button
-          onClick={onGuestLogin}
-          className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all mb-4"
-        >
-          Entrar como Visitante
-        </button>
-        <div className="flex gap-4">
-          <button className="flex-1 py-4 border border-slate-200 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all">
-            <Chrome size={18} className="text-red-500" /> Google
-          </button>
-          <button className="flex-1 py-4 border border-slate-200 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all">
-            <Github size={18} /> GitHub
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
