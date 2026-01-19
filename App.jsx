@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Plus,
   LogOut,
@@ -137,6 +137,7 @@ export default function App() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("theme") || "light"
   );
+  const themeChangedRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -155,7 +156,17 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      setTheme(user.theme || "light");
+      if (themeChangedRef.current) {
+        if (user.theme !== theme) {
+          fetch(`${API_URL}/users/${user.id}/theme`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ theme: theme }),
+          }).catch(() => console.error("Erro ao sincronizar tema."));
+        }
+      } else {
+        setTheme(user.theme || "light");
+      }
       fetchLinks();
     }
   }, [user]);
@@ -192,6 +203,7 @@ export default function App() {
   };
 
   const toggleTheme = async () => {
+    themeChangedRef.current = true;
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     if (user) {
@@ -262,7 +274,15 @@ export default function App() {
 
   if (!user)
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 text-center transition-colors">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 text-center transition-colors relative">
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
+          >
+            {theme === "light" ? <Moon size={24} /> : <Sun size={24} />}
+          </button>
+        </div>
         <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] shadow-2xl max-w-md w-full border border-slate-100 dark:border-slate-800">
           <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200 dark:shadow-none">
             <LinkIcon className="text-white" />

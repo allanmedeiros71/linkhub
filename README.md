@@ -49,8 +49,7 @@ Este projeto está sob a licença MIT.
 
 ## TODO
 
-- Adicionar um botão de alternância de tema na tela de início de sessão para que o usuário possa ajustar o visual antes de entrar.
 - Autenticação com JWT: Substituir o login simulado por um sistema real de usuários (google e git) com encriptação de passwords (usando bcrypt no backend).
 - Temas Dinâmicos: Implementar um seletor de temas para que seja guardado nas preferências do usuário no PostgreSQL.
 - Deploy em Containers: Preparar a configuração final do Docker para colocar o projeto online.
--
+- Notificações (Toasts): Substituir o window.confirm e alertas de erro por pequenas notificações visuais no canto do ecrã.
