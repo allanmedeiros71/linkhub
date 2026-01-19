@@ -34,7 +34,6 @@ O **LinkHub** é uma aplicação web moderna para organizar e acessar links favo
 ```
 
 3. **Configure o Firebase**:
-
    - Crie um projeto no Console do Firebase.
    - Ative o Authentication e o Cloud Firestore.
 
@@ -47,3 +46,11 @@ O **LinkHub** é uma aplicação web moderna para organizar e acessar links favo
 ## 📄 Licença
 
 Este projeto está sob a licença MIT.
+
+## TODO
+
+- Adicionar um botão de alternância de tema na tela de início de sessão para que o usuário possa ajustar o visual antes de entrar.
+- Autenticação com JWT: Substituir o login simulado por um sistema real de usuários (google e git) com encriptação de passwords (usando bcrypt no backend).
+- Temas Dinâmicos: Implementar um seletor de temas para que seja guardado nas preferências do usuário no PostgreSQL.
+- Deploy em Containers: Preparar a configuração final do Docker para colocar o projeto online.
+-
