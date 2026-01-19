@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(
@@ -29,7 +29,7 @@ app.use(
       secure: process.env.NODE_ENV === "production", // set to true if https
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
-  })
+  }),
 );
 app.use(passport.initialize());
 app.use(passport.session());
@@ -41,6 +41,7 @@ const pool = new Pool({
   database: process.env.DB_NAME || "linkhub",
   password: process.env.DB_PASSWORD || "password",
   port: process.env.DB_PORT || 5432,
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
 // Inicialização das tabelas e migrações
@@ -126,7 +127,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           // Verifica se usuario ja existe pelo google_id
           let result = await pool.query(
             "SELECT * FROM users WHERE google_id = $1",
-            [profile.id]
+            [profile.id],
           );
           if (result.rows.length > 0) {
             return done(null, result.rows[0]);
@@ -135,17 +136,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           // Se nao, verifica por email (se disponivel) para linkar contas (opcional, aqui simplificado cria novo)
           // Vamos criar um novo
           const email =
-            profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+            profile.emails && profile.emails[0]
+              ? profile.emails[0].value
+              : null;
           result = await pool.query(
             "INSERT INTO users (google_id, email, theme) VALUES ($1, $2, $3) RETURNING *",
-            [profile.id, email, "light"]
+            [profile.id, email, "light"],
           );
           done(null, result.rows[0]);
         } catch (err) {
           done(err, null);
         }
-      }
-    )
+      },
+    ),
   );
 }
 
@@ -162,7 +165,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         try {
           let result = await pool.query(
             "SELECT * FROM users WHERE github_id = $1",
-            [profile.id]
+            [profile.id],
           );
           if (result.rows.length > 0) {
             return done(null, result.rows[0]);
@@ -170,18 +173,20 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 
           // Email pode ser privado no github
           const email =
-            profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+            profile.emails && profile.emails[0]
+              ? profile.emails[0].value
+              : null;
 
           result = await pool.query(
             "INSERT INTO users (github_id, email, theme) VALUES ($1, $2, $3) RETURNING *",
-            [profile.id, email, "light"]
+            [profile.id, email, "light"],
           );
           done(null, result.rows[0]);
         } catch (err) {
           done(err, null);
         }
-      }
-    )
+      },
+    ),
   );
 }
 
@@ -189,7 +194,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 
 app.get(
   "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 
 app.get(
@@ -197,12 +202,12 @@ app.get(
   passport.authenticate("google", { failureRedirect: FRONTEND_URL }),
   (req, res) => {
     res.redirect(`${FRONTEND_URL}/app`);
-  }
+  },
 );
 
 app.get(
   "/auth/github",
-  passport.authenticate("github", { scope: ["user:email"] })
+  passport.authenticate("github", { scope: ["user:email"] }),
 );
 
 app.get(
@@ -210,7 +215,7 @@ app.get(
   passport.authenticate("github", { failureRedirect: FRONTEND_URL }),
   (req, res) => {
     res.redirect(`${FRONTEND_URL}/app`);
-  }
+  },
 );
 
 app.get("/api/me", (req, res) => {
@@ -245,28 +250,29 @@ app.post("/api/login", async (req, res) => {
         const hash = await bcrypt.hash(password, salt);
         const newUser = await pool.query(
           "INSERT INTO users (email, password, theme) VALUES ($1, $2, $3) RETURNING *",
-          [email, hash, "light"]
+          [email, hash, "light"],
         );
-         // Logar automaticamente
+        // Logar automaticamente
         req.login(newUser.rows[0], (err) => {
-            if (err) throw err;
-            return res.json(newUser.rows[0]);
+          if (err) throw err;
+          return res.json(newUser.rows[0]);
         });
         return;
       }
-       return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     if (user.password) {
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
+      if (!isMatch)
+        return res.status(400).json({ error: "Invalid credentials" });
     } else {
-        // Usuario oauth tentando logar com senha? Ou usuario antigo sem senha (do codigo anterior)?
-        // Se for usuario do codigo anterior (senha "123456" hardcoded na criacao), a comparacao vai falhar pois nao é hash.
-        // Vamos permitir se a senha for "123456" e atualizar para hash?
-        // Simplificacao: Se nao tem password hash no banco, nega ou pede reset.
-        // Para este prototipo: se password eh null, erro.
-         return res.status(400).json({ error: "Use OAuth login" });
+      // Usuario oauth tentando logar com senha? Ou usuario antigo sem senha (do codigo anterior)?
+      // Se for usuario do codigo anterior (senha "123456" hardcoded na criacao), a comparacao vai falhar pois nao é hash.
+      // Vamos permitir se a senha for "123456" e atualizar para hash?
+      // Simplificacao: Se nao tem password hash no banco, nega ou pede reset.
+      // Para este prototipo: se password eh null, erro.
+      return res.status(400).json({ error: "Use OAuth login" });
     }
 
     req.login(user, (err) => {
@@ -278,7 +284,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-
 // --- ROTAS DA API DE RECURSOS ---
 // Middleware de protecao
 const ensureAuthenticated = (req, res, next) => {
@@ -287,14 +292,15 @@ const ensureAuthenticated = (req, res, next) => {
 };
 
 app.put("/api/users/:id/theme", ensureAuthenticated, async (req, res) => {
-    // Garantir que so altera o proprio tema
-    if (parseInt(req.params.id) !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  // Garantir que so altera o proprio tema
+  if (parseInt(req.params.id) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
 
   const { theme } = req.body;
   try {
     const result = await pool.query(
       "UPDATE users SET theme = $1 WHERE id = $2 RETURNING *",
-      [theme, req.params.id]
+      [theme, req.params.id],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -303,12 +309,13 @@ app.put("/api/users/:id/theme", ensureAuthenticated, async (req, res) => {
 });
 
 app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
-  if (parseInt(req.params.userId) !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  if (parseInt(req.params.userId) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
 
   try {
     const result = await pool.query(
       "SELECT * FROM links WHERE user_id = $1 ORDER BY order_index ASC",
-      [req.params.userId]
+      [req.params.userId],
     );
     res.json(result.rows);
   } catch (err) {
@@ -318,12 +325,13 @@ app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
 
 app.post("/api/links", ensureAuthenticated, async (req, res) => {
   const { user_id, title, url, order_index } = req.body;
-  if (parseInt(user_id) !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  if (parseInt(user_id) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
 
   try {
     const result = await pool.query(
       "INSERT INTO links (user_id, title, url, order_index) VALUES ($1, $2, $3, $4) RETURNING *",
-      [user_id, title, url, order_index]
+      [user_id, title, url, order_index],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -337,9 +345,12 @@ app.put("/api/links/:id", ensureAuthenticated, async (req, res) => {
   try {
     const result = await pool.query(
       "UPDATE links SET title = $1, url = $2, order_index = $3 WHERE id = $4 AND user_id = $5 RETURNING *",
-      [title, url, order_index, req.params.id, req.user.id]
+      [title, url, order_index, req.params.id, req.user.id],
     );
-    if (result.rows.length === 0) return res.status(404).json({error: "Link not found or permission denied"});
+    if (result.rows.length === 0)
+      return res
+        .status(404)
+        .json({ error: "Link not found or permission denied" });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -348,8 +359,14 @@ app.put("/api/links/:id", ensureAuthenticated, async (req, res) => {
 
 app.delete("/api/links/:id", ensureAuthenticated, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM links WHERE id = $1 AND user_id = $2 RETURNING *", [req.params.id, req.user.id]);
-    if (result.rowCount === 0) return res.status(404).json({error: "Link not found or permission denied"});
+    const result = await pool.query(
+      "DELETE FROM links WHERE id = $1 AND user_id = $2 RETURNING *",
+      [req.params.id, req.user.id],
+    );
+    if (result.rowCount === 0)
+      return res
+        .status(404)
+        .json({ error: "Link not found or permission denied" });
     res.json({ message: "Link removido" });
   } catch (err) {
     res.status(500).json({ error: err.message });
