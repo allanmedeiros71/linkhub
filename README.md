@@ -1,55 +1,116 @@
 # LinkHub - Gestor de Links Moderno
 
-O **LinkHub** é uma aplicação web moderna para organizar e acessar links favoritos de forma visual, utilizando cards interativos e persistência de dados em tempo real.
+O **LinkHub** é uma aplicação web full-stack para organizar, acessar e compartilhar links favoritos. O projeto evoluiu para uma arquitetura robusta com backend próprio, banco de dados relacional e uma interface polida.
 
-## 🚀 Funcionalidades Atuais
+Agora conta com uma **Landing Page** dedicada para apresentar o status do projeto e as tecnologias empregadas.
 
-- **Autenticação Segura**: Login via E-mail ou Visitante (Firebase Auth).
-- **CRUD Completo**: Criação, leitura, edição e exclusão de links.
-- **Interface Moderna**: Design baseado em cards com Tailwind CSS e Lucide Icons.
-- **Persistência de Dados**: Integração com Firestore para salvar links e sua ordem.
-- **Reordenação Simples**: Sistema de ordenação manual para organizar seus links favoritos.
-- **Favicons Automáticos**: Identificação visual automática dos sites através da URL.
+## 🚀 Funcionalidades
+
+- **Landing Page Informativa**: Página inicial (`/`) apresentando o projeto e seu status de desenvolvimento.
+- **Autenticação Robusta**:
+  - Login Social: **Google** e **GitHub** (via OAuth/Passport).
+  - Login Local: E-mail e Senha com criptografia (**bcrypt**).
+  - Sessões persistentes com `express-session`.
+- **Gerenciador de Links (`/app`)**:
+  - **CRUD Completo**: Adicione, edite e remova links.
+  - **Drag & Drop**: Reordene seus cards arrastando e soltando (powered by `dnd-kit`).
+  - **Favicons**: Recuperação automática de ícones dos sites.
+- **Personalização**:
+  - **Tema Dark/Light**: Alternância de tema com persistência nas preferências do usuário no banco de dados.
+- **Backend API**:
+  - API RESTful construída com Express.
+  - Banco de dados **PostgreSQL** para usuários e links.
 
 ## 🛠️ Tecnologias Utilizadas
 
-- [React](https://reactjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Firebase](https://firebase.google.com/) (Auth & Firestore)
-- [Lucide React](https://lucide.dev/) (Ícones)
-- [dnd-kit](https://dndkit.com/) (Drag & Drop)
+### Frontend
+
+- **React** (Vite)
+- **React Router Dom** (Roteamento)
+- **Tailwind CSS** (Estilização)
+- **Lucide React** (Ícones)
+- **@dnd-kit** (Drag & Drop acessível)
+
+### Backend
+
+- **Node.js** & **Express**
+- **PostgreSQL** (Banco de dados)
+- **Passport.js** (Estratégias Google, GitHub e Local)
+- **Bcryptjs** (Hashing de senhas)
+- **Pg** (Cliente PostgreSQL)
+
+### DevOps
+
+- **Docker** & **Docker Compose** (Containerização do Banco de Dados)
 
 ## 📦 Como Rodar o Projeto
 
+### Pré-requisitos
+
+- Node.js (v18+)
+- Docker e Docker Compose (para o banco de dados)
+
+### Passo a Passo
+
 1. **Clone o repositório:**
 
-```shell
-    git clone https://github.com/seu-usuario/nome-do-repositorio.git
-```
+   ```bash
+   git clone https://github.com/seu-usuario/linkhub.git
+   cd linkhub
+   ```
 
-2. **Instale as dependências**:
+2. **Configure o Banco de Dados:**
+   Inicie o container do PostgreSQL:
 
-```shell
-    npm install
-```
+   ```bash
+   docker-compose up -d
+   ```
 
-3. **Configure o Firebase**:
-   - Crie um projeto no Console do Firebase.
-   - Ative o Authentication e o Cloud Firestore.
+3. **Configure as Variáveis de Ambiente:**
+   Crie um arquivo `.env` na raiz baseado no `.env.sample` (se houver) ou use as configurações abaixo:
 
-4. **Inicie o servidor de desenvolvimento**:
+   ```env
+   DB_USER=user
+   DB_HOST=localhost
+   DB_NAME=linkhub
+   DB_PASSWORD=password
+   DB_PORT=5432
+   SESSION_SECRET=seu_segredo_super_secreto
 
-```shell
-    npm run dev
-```
+   # Opcional: Configuração OAuth (necessário para login social)
+   GOOGLE_CLIENT_ID=seu_client_id
+   GOOGLE_CLIENT_SECRET=seu_client_secret
+   GITHUB_CLIENT_ID=seu_client_id
+   GITHUB_CLIENT_SECRET=seu_client_secret
+   ```
+
+4. **Instale as dependências:**
+
+   ```bash
+   npm install
+   ```
+
+5. **Inicie a Aplicação:**
+   Para rodar tanto o servidor backend quanto o frontend (via `concurrently`):
+
+   ```bash
+   npm start
+   ```
+
+   Acesse:
+   - **Landing Page:** `http://localhost:5173`
+   - **App:** `http://localhost:5173/app`
+   - **API:** `http://localhost:5000`
 
 ## 📄 Licença
 
 Este projeto está sob a licença MIT.
 
-## TODO
+## ✅ Status das Tarefas (TODO)
 
-- Autenticação com JWT: Substituir o login simulado por um sistema real de usuários (google e git) com encriptação de passwords (usando bcrypt no backend).
-- Temas Dinâmicos: Implementar um seletor de temas para que seja guardado nas preferências do usuário no PostgreSQL.
-- Deploy em Containers: Preparar a configuração final do Docker para colocar o projeto online.
-- Notificações (Toasts): Substituir o window.confirm e alertas de erro por pequenas notificações visuais no canto do ecrã.
+- [x] **Autenticação Real**: Implementado login com Google, GitHub e Local (bcrypt).
+- [x] **Banco de Dados**: Migração de Firebase para PostgreSQL concluída.
+- [ ] **Temas Dinâmicos**: Seletor de tema com persistência no banco de dados.
+- [x] **Landing Page**: Página de apresentação criada.
+- [ ] **Deploy em Containers**: Configuração final do Docker para a aplicação (Dockerfile da app) - _O banco já está containerizado._
+- [ ] **Notificações (Toasts)**: Melhorar feedback visual de erros/sucesso.

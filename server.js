@@ -196,7 +196,7 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: FRONTEND_URL }),
   (req, res) => {
-    res.redirect(FRONTEND_URL);
+    res.redirect(`${FRONTEND_URL}/app`);
   }
 );
 
@@ -209,7 +209,7 @@ app.get(
   "/auth/github/callback",
   passport.authenticate("github", { failureRedirect: FRONTEND_URL }),
   (req, res) => {
-    res.redirect(FRONTEND_URL);
+    res.redirect(`${FRONTEND_URL}/app`);
   }
 );
 
