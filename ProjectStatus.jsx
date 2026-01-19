@@ -7,8 +7,9 @@ import {
   Shield,
   Layout,
   Move,
-  Code2,
+  Code2
 } from "lucide-react";
+import DemoGestorLinks from "./demo_gestor_links";
 
 export default function ProjectStatus() {
   const [theme, setTheme] = useState("light");
@@ -141,83 +142,20 @@ export default function ProjectStatus() {
             </div>
 
             {/* Mock Window */}
-            <div className="relative max-w-4xl mx-auto bg-white dark:bg-slate-950 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-500 hover:shadow-purple-500/10">
+            <div className="relative max-w-5xl mx-auto bg-slate-950 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden transition-all duration-500 hover:shadow-purple-500/10 h-[600px] overflow-y-auto custom-scrollbar">
               {/* Mock Window Header */}
-              <div className="h-10 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center px-4 gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-400/80"></div>
-                <div className="w-3 h-3 rounded-full bg-green-400/80"></div>
-                <div className="ml-4 h-5 w-64 bg-slate-200/50 dark:bg-slate-800 rounded-md flex items-center px-2">
-                  <div className="w-3 h-3 bg-slate-300 dark:bg-slate-600 rounded-full mr-2"></div>
-                  <div className="h-2 w-20 bg-slate-300/50 dark:bg-slate-700 rounded-full"></div>
+              <div className="h-10 border-b border-slate-800 bg-slate-900 flex items-center px-4 gap-2 sticky top-0 z-50">
+                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                <div className="ml-4 h-6 px-4 bg-slate-800 rounded-md flex items-center justify-center text-[10px] text-slate-400 font-mono flex-1 max-w-sm mx-auto">
+                   linkhub-demo.vercel.app
                 </div>
               </div>
 
-              {/* Mock App Content */}
-              <div className="p-6 md:p-8">
-                <div className="flex justify-between items-center mb-8">
-                  <div>
-                    <div className="h-6 w-32 bg-slate-800 dark:bg-white rounded-lg mb-2"></div>
-                    <div className="h-3 w-20 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
-                  </div>
-                  <div className="h-10 w-32 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20 opacity-90"></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    {
-                      title: "GitHub",
-                      url: "https://github.com",
-                      icon: "https://github.com/favicon.ico",
-                    },
-                    {
-                      title: "React Docs",
-                      url: "https://react.dev",
-                      icon: "https://react.dev/favicon.ico",
-                    },
-                    {
-                      title: "Tailwind CSS",
-                      url: "https://tailwindcss.com",
-                      icon: "https://tailwindcss.com/favicons/favicon.ico",
-                    },
-                    {
-                      title: "Figma",
-                      url: "https://figma.com",
-                      icon: "https://static.figma.com/app/icon/1/favicon.ico",
-                    },
-                    {
-                      title: "Vercel",
-                      url: "https://vercel.com",
-                      icon: "https://assets.vercel.com/image/upload/front/favicon/vercel/57x57.png",
-                    },
-                    {
-                      title: "ChatGPT",
-                      url: "https://openai.com",
-                      icon: "https://openai.com/favicon.ico",
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="group relative flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 cursor-default"
-                    >
-                      <div className="shrink-0 w-12 h-12 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                        <img
-                          src={`https://www.google.com/s2/favicons?domain=${item.url}&sz=64`}
-                          className="w-6 h-6 opacity-90"
-                          alt=""
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="h-4 w-24 bg-slate-800 dark:bg-slate-200 rounded mb-1.5 font-bold text-sm truncate">
-                          {item.title}
-                        </div>
-                        <div className="h-2 w-32 bg-slate-300 dark:bg-slate-600 rounded-full text-[10px] truncate opacity-60">
-                          {item.url}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Render the imported demo component */}
+              <div className="transform scale-[0.9] origin-top h-full">
+                 <DemoGestorLinks />
               </div>
             </div>
           </div>
