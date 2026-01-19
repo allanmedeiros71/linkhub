@@ -469,9 +469,10 @@ export default function App() {
               setEditingLink(null);
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all active:scale-95 text-sm"
+            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 dark:shadow-none transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-sm"
           >
-            <Plus size={18} /> Novo Link
+            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+            <span>Novo Link</span>
           </button>
         </div>
 
