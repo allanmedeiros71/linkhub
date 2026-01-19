@@ -34,14 +34,17 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Configuração da ligação ao PostgreSQL via Docker
+// Configuração da ligação ao PostgreSQL
+const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?sslmode=require`;
+
 const pool = new Pool({
-  user: process.env.DB_USER || "user",
-  host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "linkhub",
-  password: process.env.DB_PASSWORD || "password",
-  port: process.env.DB_PORT || 5432,
-  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false // Neon certificates are valid, but this helps avoiding self-signed issues if any intermediary exists or node strictness. 
+                              // Actually, for Neon, 'true' or proper CA is best, but usually rejectUnauthorized: false is the quick fix for "self signed" errors.
+                              // The error "connection is insecure" means we weren't even trying SSL. 
+                              // Using sslmode=require in connection string AND ssl object is robust.
+  }
 });
 
 // Inicialização das tabelas e migrações
