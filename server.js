@@ -156,6 +156,9 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='avatar_url') THEN
           ALTER TABLE users ADD COLUMN avatar_url TEXT;
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='view_mode') THEN
+          ALTER TABLE users ADD COLUMN view_mode VARCHAR(20) DEFAULT 'categorized';
+        END IF;
         ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
@@ -399,7 +402,7 @@ app.put("/api/users/:id", ensureAuthenticated, async (req, res) => {
   if (parseInt(req.params.id) !== req.user.id)
     return res.status(403).json({ error: "Forbidden" });
 
-  const { name, avatar_url, email, password } = req.body;
+  const { name, avatar_url, email, password, view_mode } = req.body;
 
   try {
     // Validações básicas
@@ -448,6 +451,10 @@ app.put("/api/users/:id", ensureAuthenticated, async (req, res) => {
       fields.push(`email = $${idx++}`);
       values.push(email);
     }
+    if (view_mode !== undefined) {
+      fields.push(`view_mode = $${idx++}`);
+      values.push(view_mode);
+    }
     if (passwordHash !== undefined) {
       fields.push(`password = $${idx++}`);
       values.push(passwordHash);
@@ -458,7 +465,7 @@ app.put("/api/users/:id", ensureAuthenticated, async (req, res) => {
     }
 
     values.push(req.user.id);
-    const query = `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING id, email, name, avatar_url, theme, google_id, github_id`;
+    const query = `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING id, email, name, avatar_url, theme, view_mode, google_id, github_id`;
     
     const result = await pool.query(query, values);
     

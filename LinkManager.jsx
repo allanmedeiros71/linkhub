@@ -248,11 +248,13 @@ export default function LinkManager() {
     const avatar_url = formData.get("avatar_url");
     const email = formData.get("email");
     const password = formData.get("password");
+    const view_mode = formData.get("view_mode");
 
     if (name) updateData.name = name;
     if (avatar_url) updateData.avatar_url = avatar_url;
     if (email) updateData.email = email;
     if (password) updateData.password = password;
+    if (view_mode) updateData.view_mode = view_mode;
 
     try {
       const response = await fetch(`${API_URL}/users/${user.id}`, {
@@ -414,14 +416,21 @@ export default function LinkManager() {
           setLinks(newOrder.map((link, i) => ({ ...link, order_index: i })));
 
           try {
-            const promises = newOrder.map((link, i) =>
-              fetch(`${API_URL}/links/${link.id}`, {
+            const promises = newOrder.map((link, i) => {
+              // Prepare payload: Extract tag IDs if tags exist
+              const payload = { 
+                  ...link, 
+                  order_index: i,
+                  tags: link.tags ? link.tags.map(t => t.id) : [] 
+              };
+              
+              return fetch(`${API_URL}/links/${link.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ ...link, order_index: i }),
-              })
-            );
+                body: JSON.stringify(payload),
+              });
+            });
             await Promise.all(promises);
           } catch (err) {
             fetchLinks();
@@ -632,225 +641,291 @@ export default function LinkManager() {
 
                 >
 
-                <div className="space-y-6">
+                        {user?.view_mode === 'simple' ? (
 
-                    {/* Uncategorized Links */}            {(() => {
+                             /* Simple View */
 
-                        const uncategorized = filteredLinks.filter(l => !l.tags || l.tags.length === 0);
+                             <SortableContext
 
-                        if (uncategorized.length === 0) return null;
+                                items={filteredLinks.map((l) => l.id)}
 
-                        const isCollapsed = collapsedCategories.has('uncategorized');
+                                strategy={rectSortingStrategy}
 
-                        const sortableIds = uncategorized.map(l => `uncat-${l.id}`);
+                              >
 
-                        
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                        return (
+                                  {filteredLinks.map((link) => (
 
-                            <div className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                    <SortableCard
 
-                                <button 
+                                      key={link.id}
 
-                                    onClick={() => {
+                                      id={link.id}
 
-                                        const newSet = new Set(collapsedCategories);
+                                      link={link}
 
-                                        if (isCollapsed) newSet.delete('uncategorized');
+                                      onEdit={handleEditLink}
 
-                                        else newSet.add('uncategorized');
+                                      onDelete={async (id) => {
 
-                                        setCollapsedCategories(newSet);
+                                        if (!window.confirm("Excluir link?")) return;
 
-                                    }}
+                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
 
-                                    className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        fetchLinks();
 
-                                >
+                                      }}
 
-                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                    />
 
-                                        <Tag size={16} /> Sem Categoria
+                                  ))}
 
-                                        <span className="text-xs font-normal text-slate-400 ml-2">({uncategorized.length})</span>
+                                </div>
 
-                                    </h3>
+                              </SortableContext>
 
-                                    {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                        ) : (
 
-                                </button>
+                            /* Categorized View */
 
-                                
+                            <div className="space-y-6">
 
-                                {!isCollapsed && (
+                                {/* Uncategorized Links */}
 
-                                    <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+                                {(() => {
 
-                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    const uncategorized = filteredLinks.filter(l => !l.tags || l.tags.length === 0);
 
-                                            {uncategorized.map(link => (
+                                    if (uncategorized.length === 0) return null;
 
-                                                <SortableCard 
+                                    const isCollapsed = collapsedCategories.has('uncategorized');
 
-                                                    key={link.id} 
+                                    const sortableIds = uncategorized.map(l => `uncat-${l.id}`);
 
-                                                    id={`uncat-${link.id}`}
+                                    
 
-                                                    link={link} 
+                                    return (
 
-                                                    onEdit={handleEditLink} 
+                                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
-                                                    onDelete={async (id) => {
+                                            <button 
 
-                                                        if (!window.confirm("Excluir link?")) return;
+                                                onClick={() => {
 
-                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+                                                    const newSet = new Set(collapsedCategories);
 
-                                                        fetchLinks();
+                                                    if (isCollapsed) newSet.delete('uncategorized');
 
-                                                    }}
+                                                    else newSet.add('uncategorized');
 
-                                                />
+                                                    setCollapsedCategories(newSet);
 
-                                            ))}
+                                                }}
+
+                                                className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+
+                                            >
+
+                                                <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+
+                                                    <Tag size={16} /> Sem Categoria
+
+                                                    <span className="text-xs font-normal text-slate-400 ml-2">({uncategorized.length})</span>
+
+                                                </h3>
+
+                                                {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+
+                                            </button>
+
+                                            
+
+                                            {!isCollapsed && (
+
+                                                <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+
+                                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                                        {uncategorized.map(link => (
+
+                                                            <SortableCard 
+
+                                                                key={link.id} 
+
+                                                                id={`uncat-${link.id}`}
+
+                                                                link={link} 
+
+                                                                onEdit={handleEditLink} 
+
+                                                                onDelete={async (id) => {
+
+                                                                    if (!window.confirm("Excluir link?")) return;
+
+                                                                    await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+
+                                                                    fetchLinks();
+
+                                                                }}
+
+                                                            />
+
+                                                        ))}
+
+                                                    </div>
+
+                                                </SortableContext>
+
+                                            )}
 
                                         </div>
 
-                                    </SortableContext>
+                                    );
 
-                                )}
+                                })()}
 
-                            </div>
+                
 
-                        );
+                                {/* Tagged Links */}
 
-                    })()}
+                                {tags.map(tag => {
 
-        
+                                    const tagLinks = filteredLinks.filter(l => l.tags && l.tags.some(t => t.id === tag.id));
 
-                    {/* Tagged Links */}            {tags.map(tag => {
+                                    if (tagLinks.length === 0) return null;
 
-                        const tagLinks = filteredLinks.filter(l => l.tags && l.tags.some(t => t.id === tag.id));
+                                    const isCollapsed = collapsedCategories.has(tag.id);
 
-                        if (tagLinks.length === 0) return null;
+                                    const sortableIds = tagLinks.map(l => `tag-${tag.id}-${l.id}`);
 
-                        const isCollapsed = collapsedCategories.has(tag.id);
+                
 
-                        const sortableIds = tagLinks.map(l => `tag-${tag.id}-${l.id}`);
+                                    return (
 
-        
+                                        <div key={tag.id} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
-                        return (
+                                             <button 
 
-                            <div key={tag.id} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                                onClick={() => {
 
-                                 <button 
+                                                    const newSet = new Set(collapsedCategories);
 
-                                    onClick={() => {
+                                                    if (isCollapsed) newSet.delete(tag.id);
 
-                                        const newSet = new Set(collapsedCategories);
+                                                    else newSet.add(tag.id);
 
-                                        if (isCollapsed) newSet.delete(tag.id);
+                                                    setCollapsedCategories(newSet);
 
-                                        else newSet.add(tag.id);
+                                                }}
 
-                                        setCollapsedCategories(newSet);
+                                                className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 
-                                    }}
+                                            >
 
-                                    className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
 
-                                >
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
 
-                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                                    {tag.name}
 
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                                                    <span className="text-xs font-normal text-slate-400 ml-2">({tagLinks.length})</span>
 
-                                        {tag.name}
+                                                </h3>
 
-                                        <span className="text-xs font-normal text-slate-400 ml-2">({tagLinks.length})</span>
+                                                {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
 
-                                    </h3>
+                                            </button>
 
-                                    {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                                            
 
-                                </button>
+                                            {!isCollapsed && (
 
-                                
+                                                 <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
 
-                                {!isCollapsed && (
+                                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                                     <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+                                                        {tagLinks.map(link => (
 
-                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                            <SortableCard 
 
-                                            {tagLinks.map(link => (
+                                                                key={`${tag.id}-${link.id}`} 
 
-                                                <SortableCard 
+                                                                id={`tag-${tag.id}-${link.id}`}
 
-                                                    key={`${tag.id}-${link.id}`} 
+                                                                link={link} 
 
-                                                    id={`tag-${tag.id}-${link.id}`}
+                                                                onEdit={handleEditLink} 
 
-                                                    link={link} 
+                                                                onDelete={async (id) => {
 
-                                                    onEdit={handleEditLink} 
+                                                                    if (!window.confirm("Excluir link?")) return;
 
-                                                    onDelete={async (id) => {
+                                                                    await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
 
-                                                        if (!window.confirm("Excluir link?")) return;
+                                                                    fetchLinks();
 
-                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+                                                                }}
 
-                                                        fetchLinks();
+                                                            />
 
-                                                    }}
+                                                        ))}
 
-                                                />
+                                                    </div>
 
-                                            ))}
+                                                </SortableContext>
+
+                                            )}
 
                                         </div>
 
-                                    </SortableContext>
+                                    );
 
-                                )}
+                                })}
 
                             </div>
 
-                        );
+                        )}
 
-                    })}
+                        <DragOverlay>
 
-                </div>
+                            {activeId ? (
 
-                <DragOverlay>
+                                 <SortableCard 
 
-                    {activeId ? (
+                                    id={activeId} 
 
-                         <SortableCard 
+                                    link={links.find(l => {
 
-                            id={activeId} 
+                                        const strId = activeId.toString();
 
-                            link={links.find(l => {
+                                        if (!strId.includes('-')) {
 
-                                // Try to parse ID to find link
+                                            // Simple mode: ID is the link ID
 
-                                const parts = activeId.split('-');
+                                            return l.id === parseInt(strId);
 
-                                const id = parts[0] === 'uncat' ? parts[1] : parts[2];
+                                        }
 
-                                return l.id === parseInt(id);
+                                        // Categorized mode: Parse ID
 
-                            })} 
+                                        const parts = strId.split('-');
 
-                            isOverlay 
+                                        // Format: uncat-{id} or tag-{tagId}-{id}
 
-                         />
+                                        const id = parts[0] === 'uncat' ? parts[1] : parts[2];
 
-                    ) : null}
+                                        return l.id === parseInt(id);
 
-                </DragOverlay>
+                                    })} 
+
+                                    isOverlay 
+
+                                 />
+
+                            ) : null}
+
+                        </DragOverlay>
 
                 </DndContext>
       </main>
@@ -985,6 +1060,18 @@ export default function LinkManager() {
                   placeholder="https://exemplo.com/foto.jpg"
                   className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">Modo de Visualização</label>
+                <select
+                  name="view_mode"
+                  defaultValue={user.view_mode || "categorized"}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  <option value="categorized">Por Categoria (Tags)</option>
+                  <option value="simple">Lista Simples (Ordenável)</option>
+                </select>
               </div>
 
               <div>
