@@ -18,6 +18,8 @@ const { Pool } = pkg;
 const PgSession = connectPgSimple(session);
 const app = express();
 
+app.set("trust proxy", 1); // Confia no proxy (Vercel/Nginx) para HTTPS e Host corretos
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // Configuração da ligação ao PostgreSQL
