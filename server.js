@@ -24,7 +24,27 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // Configuração da ligação ao PostgreSQL
 const useSSL = process.env.DB_SSL === "true" || (process.env.NODE_ENV === "production" && process.env.DB_SSL !== "false");
-const connectionString = process.env.DATABASE_URL || `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${useSSL ? "?sslmode=require" : ""}`;
+
+let connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_HOST || !process.env.DB_NAME) {
+    console.error("ERRO CRÍTICO: Variáveis de conexão com banco de dados faltando. Verifique DB_USER, DB_PASSWORD, DB_HOST, DB_NAME.");
+  }
+  
+  const user = encodeURIComponent(process.env.DB_USER);
+  const password = encodeURIComponent(process.env.DB_PASSWORD);
+  const host = process.env.DB_HOST;
+  const port = process.env.DB_PORT || 5432;
+  const dbName = encodeURIComponent(process.env.DB_NAME);
+  
+  connectionString = `postgres://${user}:${password}@${host}:${port}/${dbName}${useSSL ? "?sslmode=require" : ""}`;
+} else {
+    // Se usar DATABASE_URL e precisar de SSL, anexa o parametro se nao existir
+    if (useSSL && !connectionString.includes("sslmode=")) {
+        connectionString += connectionString.includes("?") ? "&sslmode=require" : "?sslmode=require";
+    }
+}
 
 const pool = new Pool({
   connectionString,
