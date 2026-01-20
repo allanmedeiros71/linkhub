@@ -382,6 +382,85 @@ const ensureAuthenticated = (req, res, next) => {
   res.status(401).json({ error: "Unauthorized" });
 };
 
+app.put("/api/users/:id", ensureAuthenticated, async (req, res) => {
+  if (parseInt(req.params.id) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
+
+  const { name, avatar_url, email, password } = req.body;
+
+  try {
+    // Validações básicas
+    if (email) {
+      const emailCheck = await pool.query(
+        "SELECT id FROM users WHERE email = $1 AND id != $2",
+        [email, req.user.id]
+      );
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ error: "Email já está em uso." });
+      }
+    }
+
+    let passwordHash = undefined;
+    if (password) {
+        const salt = await bcrypt.genSalt(10);
+        passwordHash = await bcrypt.hash(password, salt);
+    }
+
+    // Construção dinâmica da query
+    // Isso evita apagar dados se o campo não for enviado (embora o frontend deva enviar o estado atual)
+    // Mas para segurança, vamos atualizar apenas o que foi enviado ou manter o atual se for null/undefined na lógica do SQL?
+    // Simplificação: Vamos assumir que o frontend envia os campos que quer editar.
+    // Melhor: Fazer um UPDATE seletivo.
+
+    // Vamos buscar o usuário atual para manter dados não enviados, ou usar COALESCE no SQL
+    
+    // Query segura com COALESCE para atualizar apenas se o valor não for NULL (exceto avatar que pode querer limpar? vamos assumir string vazia para limpar)
+    
+    // NOTA: Se o usuário quiser remover o avatar, deve enviar string vazia? 
+    // Vamos considerar que null ou undefined no body significa "não alterar".
+    
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (name !== undefined) {
+      fields.push(`name = $${idx++}`);
+      values.push(name);
+    }
+    if (avatar_url !== undefined) {
+      fields.push(`avatar_url = $${idx++}`);
+      values.push(avatar_url);
+    }
+    if (email !== undefined) {
+      fields.push(`email = $${idx++}`);
+      values.push(email);
+    }
+    if (passwordHash !== undefined) {
+      fields.push(`password = $${idx++}`);
+      values.push(passwordHash);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: "Nenhum dado para atualizar." });
+    }
+
+    values.push(req.user.id);
+    const query = `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING id, email, name, avatar_url, theme, google_id, github_id`;
+    
+    const result = await pool.query(query, values);
+    
+    // Atualizar a sessão se necessário (opcional, mas bom para consistência imediata se usar passport session)
+    // Passport session armazena o user ID geralmente, e deserializa a cada request.
+    // Como deserializamos do banco a cada request, a próxima requisição já pegará os dados novos.
+    
+    res.json(result.rows[0]);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao atualizar perfil." });
+  }
+});
+
 app.put("/api/users/:id/theme", ensureAuthenticated, async (req, res) => {
   // Garantir que so altera o proprio tema
   if (parseInt(req.params.id) !== req.user.id)

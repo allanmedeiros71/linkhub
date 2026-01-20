@@ -14,6 +14,7 @@ import {
   Mail,
   Lock,
   User,
+  Settings,
 } from "lucide-react";
 
 // Importações para o Drag and Drop
@@ -136,6 +137,7 @@ export default function LinkManager() {
   const [links, setLinks] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -214,6 +216,43 @@ export default function LinkManager() {
       setLinks(data.sort((a, b) => a.order_index - b.order_index));
     } catch (err) {
       setError("Erro ao conectar ao servidor.");
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const updateData = {};
+    
+    const name = formData.get("name");
+    const avatar_url = formData.get("avatar_url");
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    if (name) updateData.name = name;
+    if (avatar_url) updateData.avatar_url = avatar_url;
+    if (email) updateData.email = email;
+    if (password) updateData.password = password;
+
+    try {
+      const response = await fetch(`${API_URL}/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Erro ao atualizar perfil");
+      }
+
+      const updatedUser = await response.json();
+      setUser({ ...user, ...updatedUser });
+      setIsSettingsOpen(false);
+      alert("Perfil atualizado com sucesso!");
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -451,7 +490,10 @@ export default function LinkManager() {
 
           <div className="flex items-center gap-2">
             {user && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 mr-2">
+              <div 
+                onClick={() => setIsSettingsOpen(true)}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 mr-2 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
                 {user.avatar_url ? (
                   <img 
                     src={user.avatar_url} 
@@ -583,6 +625,77 @@ export default function LinkManager() {
                 className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all"
               >
                 Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <form
+            onSubmit={handleUpdateProfile}
+            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300"
+          >
+            <h2 className="font-black text-xl mb-6 dark:text-white">
+              Minha Conta
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">Nome</label>
+                <input
+                  name="name"
+                  defaultValue={user.name || ""}
+                  placeholder="Seu nome"
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={user.email || ""}
+                  placeholder="Seu email"
+                  required
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">URL do Avatar</label>
+                <input
+                  name="avatar_url"
+                  defaultValue={user.avatar_url || ""}
+                  placeholder="https://exemplo.com/foto.jpg"
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">Nova Senha</label>
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="Deixe em branco para manter"
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                className="flex-1 py-4 text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all"
+              >
+                Salvar Alterações
               </button>
             </div>
           </form>
