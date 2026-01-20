@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
 import connectPgSimple from "connect-pg-simple";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -180,6 +181,8 @@ if (googleConfigured) {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: "/auth/google/callback",
+        userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+        proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -447,15 +450,37 @@ app.delete("/api/links/:id", ensureAuthenticated, async (req, res) => {
 
 // Serve static assets in production or local testing with build
 if (!process.env.VERCEL) {
-  app.use(express.static(path.join(__dirname, "dist")));
+  const distPath = path.join(__dirname, "dist");
+  const indexPath = path.resolve(__dirname, "dist", "index.html");
 
-  app.get("*", (req, res) => {
-    // Verifica se é uma rota de API antes de retornar o HTML
-    if (req.url.startsWith('/api/') || req.url.startsWith('/auth/')) {
-       return res.status(404).json({ error: 'Not found' });
-    }
-    res.sendFile(path.resolve(__dirname, "dist", "index.html"));
-  });
+  if (fs.existsSync(indexPath)) {
+    app.use(express.static(distPath));
+
+    app.get("*", (req, res) => {
+      // Verifica se é uma rota de API antes de retornar o HTML
+      if (req.url.startsWith('/api/') || req.url.startsWith('/auth/')) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      res.sendFile(indexPath);
+    });
+  } else {
+    // Fallback for development mode when build is not ready
+    app.get("*", (req, res) => {
+      res.send(`
+        <html>
+          <head><title>LinkHub API</title></head>
+          <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1>LinkHub API is Running 🚀</h1>
+            <p>You are currently accessing the Backend API on port ${PORT}.</p>
+            <p>The frontend build (dist/index.html) was not found.</p>
+            <p>If you are in development mode, please access the frontend via the Vite Dev Server:</p>
+            <p><a href="http://localhost:5173" style="font-size: 1.2em; font-weight: bold; color: blue;">Go to http://localhost:5173</a></p>
+            <p style="font-size: 0.8em; color: gray; margin-top: 20px;">(Note: FRONTEND_URL is configured as: ${FRONTEND_URL})</p>
+          </body>
+        </html>
+      `);
+    });
+  }
 }
 
 const PORT = process.env.PORT || 5000;
