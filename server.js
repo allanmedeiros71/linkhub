@@ -49,8 +49,8 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.SESSION_SECURE ? process.env.SESSION_SECURE === "true" : process.env.NODE_ENV === "production", 
-      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax', // Importante para cookies cross-site/oauth
+      secure: process.env.NODE_ENV === "production", 
+      sameSite: "lax", // 'lax' é seguro o suficiente e funciona bem para auth em localhost e produção na maioria dos casos. 'none' exige secure: true.
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   }),
@@ -411,11 +411,15 @@ app.delete("/api/links/:id", ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Serve static assets in production
-if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
+// Serve static assets in production or local testing with build
+if (!process.env.VERCEL) {
   app.use(express.static(path.join(__dirname, "dist")));
 
   app.get("*", (req, res) => {
+    // Verifica se é uma rota de API antes de retornar o HTML
+    if (req.url.startsWith('/api/') || req.url.startsWith('/auth/')) {
+       return res.status(404).json({ error: 'Not found' });
+    }
     res.sendFile(path.resolve(__dirname, "dist", "index.html"));
   });
 }
