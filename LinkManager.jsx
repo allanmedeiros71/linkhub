@@ -34,8 +34,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const API_URL = "http://localhost:5000/api";
-const AUTH_URL = "http://localhost:5000/auth";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const API_URL = `${BACKEND_URL}/api`;
+const AUTH_URL = `${BACKEND_URL}/auth`;
 
 // --- COMPONENTE DE CARD ORDENÁVEL ---
 function SortableCard({ link, onEdit, onDelete, isOverlay }) {
