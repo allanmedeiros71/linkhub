@@ -172,7 +172,8 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Google Strategy
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+if (googleConfigured) {
   passport.use(
     new GoogleStrategy(
       {
@@ -211,7 +212,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // GitHub Strategy
-if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
+if (githubConfigured) {
   passport.use(
     new GitHubStrategy(
       {
@@ -252,6 +254,12 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 
 app.get(
   "/auth/google",
+  (req, res, next) => {
+    if (!googleConfigured) {
+      return res.status(500).json({ error: "Google authentication not configured (missing env vars)" });
+    }
+    next();
+  },
   passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 
@@ -265,6 +273,12 @@ app.get(
 
 app.get(
   "/auth/github",
+  (req, res, next) => {
+    if (!githubConfigured) {
+      return res.status(500).json({ error: "GitHub authentication not configured (missing env vars)" });
+    }
+    next();
+  },
   passport.authenticate("github", { scope: ["user:email"] }),
 );
 
