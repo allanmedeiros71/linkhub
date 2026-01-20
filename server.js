@@ -9,14 +9,25 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import bcrypt from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
+import connectPgSimple from "connect-pg-simple";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const { Pool } = pkg;
+const PgSession = connectPgSimple(session);
 const app = express();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// Configuração da ligação ao PostgreSQL
+const useSSL = process.env.DB_SSL === "true" || (process.env.NODE_ENV === "production" && process.env.DB_SSL !== "false");
+const connectionString = process.env.DATABASE_URL || `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${useSSL ? "?sslmode=require" : ""}`;
+
+const pool = new Pool({
+  connectionString,
+  ssl: useSSL ? { rejectUnauthorized: false } : undefined,
+});
 
 app.use(
   cors({
@@ -27,11 +38,17 @@ app.use(
 app.use(express.json());
 app.use(
   session({
+    store: new PgSession({
+      pool: pool,
+      tableName: "session",
+      createTableIfMissing: true
+    }),
     secret: process.env.SESSION_SECRET || "dev_secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.SESSION_SECURE ? process.env.SESSION_SECURE === "true" : process.env.NODE_ENV === "production", // set to true if https
+      secure: process.env.SESSION_SECURE ? process.env.SESSION_SECURE === "true" : process.env.NODE_ENV === "production", 
+      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax', // Importante para cookies cross-site/oauth
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   }),
@@ -43,15 +60,6 @@ app.use(passport.session());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Session ID: ${req.sessionID} - User: ${req.user ? req.user.id : "Unauthenticated"}`);
   next();
-});
-
-// Configuração da ligação ao PostgreSQL
-const useSSL = process.env.DB_SSL === "true" || (process.env.NODE_ENV === "production" && process.env.DB_SSL !== "false");
-const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${useSSL ? "?sslmode=require" : ""}`;
-
-const pool = new Pool({
-  connectionString,
-  ssl: useSSL ? { rejectUnauthorized: false } : undefined,
 });
 
 // Inicialização das tabelas e migrações
@@ -75,6 +83,22 @@ const initDB = async () => {
         order_index INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL
+      )
+      WITH (OIDS=FALSE);
+
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+          ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+        END IF;
+      END $$;
+
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
     `);
 
     // Migrações para garantir colunas novas em bancos existentes
@@ -94,14 +118,16 @@ const initDB = async () => {
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
     `);
-    // Note: email might be null for some oauth providers if they don't share it, though usually we want it.
-    // Making email nullable just in case, or we enforce it in logic.
 
     console.log("Banco de dados PostgreSQL pronto e atualizado.");
   } catch (err) {
     console.error("Erro ao inicializar banco de dados:", err);
   }
 };
+// Executa initDB apenas se não estiver em ambiente serverless (para evitar overhead em cada request) ou se for o primeiro boot
+// No Vercel, serverless functions podem não esperar promises async soltas.
+// Idealmente, initDB deve ser rodado manualmente ou checado. 
+// Vamos manter assim, mas em serverless isso pode ser um gargalo.
 initDB();
 
 // --- PASSPORT CONFIG ---
@@ -384,7 +410,7 @@ app.delete("/api/links/:id", ensureAuthenticated, async (req, res) => {
 });
 
 // Serve static assets in production
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname, "dist")));
 
   app.get("*", (req, res) => {
@@ -393,4 +419,8 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+}
+
+export default app;
