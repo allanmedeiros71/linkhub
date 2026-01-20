@@ -39,6 +39,12 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Debug Middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Session ID: ${req.sessionID} - User: ${req.user ? req.user.id : "Unauthenticated"}`);
+  next();
+});
+
 // Configuração da ligação ao PostgreSQL
 const useSSL = process.env.DB_SSL === "true" || (process.env.NODE_ENV === "production" && process.env.DB_SSL !== "false");
 const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${useSSL ? "?sslmode=require" : ""}`;

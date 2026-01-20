@@ -145,6 +145,7 @@ export default function LinkManager() {
   // Login State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
 
   const themeChangedRef = useRef(false);
 
@@ -176,7 +177,6 @@ export default function LinkManager() {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
-              // Credentials included automatically by logic below? No, explicit needed.
             },
             credentials: "include",
             body: JSON.stringify({ theme: theme }),
@@ -198,6 +198,8 @@ export default function LinkManager() {
       }
     } catch (err) {
       // Not authenticated
+    } finally {
+      setCheckingSession(false);
     }
   };
 
@@ -319,6 +321,14 @@ export default function LinkManager() {
       }
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   // --- LOGIN SCREEN ---
   if (!user)
