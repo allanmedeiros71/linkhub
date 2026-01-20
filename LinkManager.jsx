@@ -13,6 +13,7 @@ import {
   Github,
   Mail,
   Lock,
+  User,
 } from "lucide-react";
 
 // Importações para o Drag and Drop
@@ -449,6 +450,28 @@ export default function LinkManager() {
           </div>
 
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 mr-2">
+                {user.avatar_url ? (
+                  <img 
+                    src={user.avatar_url} 
+                    alt="Profile" 
+                    className="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-slate-600" 
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  />
+                ) : null}
+                
+                <div 
+                  className={`w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 ${user.avatar_url ? 'hidden' : 'flex'}`}
+                >
+                  <User size={14} />
+                </div>
+                
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 max-w-[150px] truncate">
+                  {user.name || user.email || "Usuário"}
+                </span>
+              </div>
+            )}
             <button
               onClick={toggleTheme}
               className="p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"

@@ -137,6 +137,12 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='github_id') THEN
           ALTER TABLE users ADD COLUMN github_id VARCHAR(255);
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+          ALTER TABLE users ADD COLUMN name VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='avatar_url') THEN
+          ALTER TABLE users ADD COLUMN avatar_url TEXT;
+        END IF;
         ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
@@ -186,24 +192,30 @@ if (googleConfigured) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
+          const name = profile.displayName;
+          const avatar_url = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+          const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+
           // Verifica se usuario ja existe pelo google_id
           let result = await pool.query(
             "SELECT * FROM users WHERE google_id = $1",
             [profile.id],
           );
+          
           if (result.rows.length > 0) {
-            return done(null, result.rows[0]);
+            // Atualiza informações (nome, avatar, email se mudou)
+            const updatedUser = await pool.query(
+              "UPDATE users SET name = $1, avatar_url = $2, email = COALESCE($3, email) WHERE id = $4 RETURNING *",
+              [name, avatar_url, email, result.rows[0].id]
+            );
+            return done(null, updatedUser.rows[0]);
           }
 
           // Se nao, verifica por email (se disponivel) para linkar contas (opcional, aqui simplificado cria novo)
           // Vamos criar um novo
-          const email =
-            profile.emails && profile.emails[0]
-              ? profile.emails[0].value
-              : null;
           result = await pool.query(
-            "INSERT INTO users (google_id, email, theme) VALUES ($1, $2, $3) RETURNING *",
-            [profile.id, email, "light"],
+            "INSERT INTO users (google_id, email, name, avatar_url, theme) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [profile.id, email, name, avatar_url, "light"],
           );
           done(null, result.rows[0]);
         } catch (err) {
@@ -226,23 +238,27 @@ if (githubConfigured) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
+          const name = profile.displayName || profile.username;
+          const avatar_url = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+          const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+
           let result = await pool.query(
             "SELECT * FROM users WHERE github_id = $1",
             [profile.id],
           );
+
           if (result.rows.length > 0) {
-            return done(null, result.rows[0]);
+             // Atualiza informações
+             const updatedUser = await pool.query(
+              "UPDATE users SET name = $1, avatar_url = $2, email = COALESCE($3, email) WHERE id = $4 RETURNING *",
+              [name, avatar_url, email, result.rows[0].id]
+            );
+            return done(null, updatedUser.rows[0]);
           }
 
-          // Email pode ser privado no github
-          const email =
-            profile.emails && profile.emails[0]
-              ? profile.emails[0].value
-              : null;
-
           result = await pool.query(
-            "INSERT INTO users (github_id, email, theme) VALUES ($1, $2, $3) RETURNING *",
-            [profile.id, email, "light"],
+            "INSERT INTO users (github_id, email, name, avatar_url, theme) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [profile.id, email, name, avatar_url, "light"],
           );
           done(null, result.rows[0]);
         } catch (err) {
