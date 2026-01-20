@@ -159,6 +159,9 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='view_mode') THEN
           ALTER TABLE users ADD COLUMN view_mode VARCHAR(20) DEFAULT 'categorized';
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tags' AND column_name='order_index') THEN
+          ALTER TABLE tags ADD COLUMN order_index INTEGER DEFAULT 0;
+        END IF;
         ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
@@ -506,7 +509,7 @@ app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
 
     try {
         const result = await pool.query(
-            "SELECT * FROM tags WHERE user_id = $1 ORDER BY name ASC",
+            "SELECT * FROM tags WHERE user_id = $1 ORDER BY order_index ASC, name ASC",
             [req.params.userId]
         );
         res.json(result.rows);
@@ -518,10 +521,39 @@ app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
 app.post("/api/tags", ensureAuthenticated, async (req, res) => {
     const { name, color } = req.body;
     try {
+        // Obter o maior order_index
+        const maxOrder = await pool.query("SELECT MAX(order_index) as max FROM tags WHERE user_id = $1", [req.user.id]);
+        const order_index = (maxOrder.rows[0].max || 0) + 1;
+
         const result = await pool.query(
-            "INSERT INTO tags (user_id, name, color) VALUES ($1, $2, $3) RETURNING *",
-            [req.user.id, name, color || '#3b82f6']
+            "INSERT INTO tags (user_id, name, color, order_index) VALUES ($1, $2, $3, $4) RETURNING *",
+            [req.user.id, name, color || '#3b82f6', order_index]
         );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put("/api/tags/:id", ensureAuthenticated, async (req, res) => {
+    const { name, color, order_index } = req.body;
+    try {
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        
+        if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
+        if (color !== undefined) { fields.push(`color = $${idx++}`); values.push(color); }
+        if (order_index !== undefined) { fields.push(`order_index = $${idx++}`); values.push(order_index); }
+        
+        values.push(req.params.id);
+        values.push(req.user.id);
+        
+        const query = `UPDATE tags SET ${fields.join(", ")} WHERE id = $${idx++} AND user_id = $${idx} RETURNING *`;
+        
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) return res.status(404).json({error: "Tag not found"});
+        
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
