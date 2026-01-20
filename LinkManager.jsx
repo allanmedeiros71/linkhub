@@ -15,6 +15,10 @@ import {
   Lock,
   User,
   Settings,
+  Tag,
+  ChevronDown,
+  ChevronRight,
+  X,
 } from "lucide-react";
 
 // Importações para o Drag and Drop
@@ -41,7 +45,7 @@ const API_URL = `${BACKEND_URL}/api`;
 const AUTH_URL = `${BACKEND_URL}/auth`;
 
 // --- COMPONENTE DE CARD ORDENÁVEL ---
-function SortableCard({ link, onEdit, onDelete, isOverlay }) {
+function SortableCard({ id, link, onEdit, onDelete, isOverlay }) {
   const {
     attributes,
     listeners,
@@ -49,7 +53,7 @@ function SortableCard({ link, onEdit, onDelete, isOverlay }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: link.id });
+  } = useSortable({ id: id }); // Use passed ID
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -135,6 +139,9 @@ function SortableCard({ link, onEdit, onDelete, isOverlay }) {
 export default function LinkManager() {
   const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [selectedTagIds, setSelectedTagIds] = useState(new Set());
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
   const [activeId, setActiveId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -190,6 +197,7 @@ export default function LinkManager() {
         setTheme(user.theme || "light");
       }
       fetchLinks();
+      fetchTags();
     }
   }, [user]);
 
@@ -204,6 +212,18 @@ export default function LinkManager() {
       // Not authenticated
     } finally {
       setCheckingSession(false);
+    }
+  };
+
+  const fetchTags = async () => {
+    try {
+        const response = await fetch(`${API_URL}/tags/${user.id}`, { credentials: "include" });
+        if (response.ok) {
+            const data = await response.json();
+            setTags(data);
+        }
+    } catch (err) {
+        console.error("Failed to fetch tags");
     }
   };
 
@@ -308,14 +328,45 @@ export default function LinkManager() {
     }
   };
 
+  const handleCreateTag = async (name) => {
+    try {
+        const response = await fetch(`${API_URL}/tags`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ name }),
+        });
+        if (response.ok) {
+            fetchTags();
+        }
+    } catch (err) {
+        console.error("Error creating tag");
+    }
+  };
+
+  const handleEditLink = (link) => {
+    setEditingLink(link);
+    setSelectedTagIds(new Set(link.tags ? link.tags.map(t => t.id) : []));
+  };
+
   const handleSaveLink = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    
+    // Collect selected tags
+    const selectedTags = [];
+    formData.forEach((value, key) => {
+        if (key === 'tags') {
+            selectedTags.push(parseInt(value));
+        }
+    });
+
     const linkData = {
       user_id: user.id,
       title: formData.get("title"),
       url: formData.get("url"),
       order_index: editingLink ? editingLink.order_index : links.length,
+      tags: selectedTags
     };
 
     const method = editingLink ? "PUT" : "POST";
@@ -341,24 +392,40 @@ export default function LinkManager() {
   const handleDragEnd = async (event) => {
     const { active, over } = event;
     setActiveId(null);
-    if (active.id !== over?.id) {
-      const oldIndex = links.findIndex((l) => l.id === active.id);
-      const newIndex = links.findIndex((l) => l.id === over.id);
-      const newOrder = arrayMove(links, oldIndex, newIndex);
-      setLinks(newOrder.map((link, i) => ({ ...link, order_index: i })));
+    
+    if (!over) return;
 
-      try {
-        const promises = newOrder.map((link, i) =>
-          fetch(`${API_URL}/links/${link.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ ...link, order_index: i }),
-          })
-        );
-        await Promise.all(promises);
-      } catch (err) {
-        fetchLinks();
+    if (active.id !== over.id) {
+      // Parse IDs to get real Link IDs
+      const getLinkId = (id) => {
+          const parts = id.toString().split('-');
+          // IDs are 'uncat-{id}' or 'tag-{tagId}-{id}'
+          return parseInt(parts[parts.length - 1]);
+      }
+
+      const activeLinkId = getLinkId(active.id);
+      const overLinkId = getLinkId(over.id);
+
+      const oldIndex = links.findIndex((l) => l.id === activeLinkId);
+      const newIndex = links.findIndex((l) => l.id === overLinkId);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(links, oldIndex, newIndex);
+          setLinks(newOrder.map((link, i) => ({ ...link, order_index: i })));
+
+          try {
+            const promises = newOrder.map((link, i) =>
+              fetch(`${API_URL}/links/${link.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ ...link, order_index: i }),
+              })
+            );
+            await Promise.all(promises);
+          } catch (err) {
+            fetchLinks();
+          }
       }
     }
   };
@@ -543,6 +610,7 @@ export default function LinkManager() {
           <button
             onClick={() => {
               setEditingLink(null);
+              setSelectedTagIds(new Set());
               setIsModalOpen(true);
             }}
             className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 dark:shadow-none transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-sm"
@@ -552,42 +620,246 @@ export default function LinkManager() {
           </button>
         </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={(event) => setActiveId(event.active.id)}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={filteredLinks.map((l) => l.id)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredLinks.map((link) => (
-                <SortableCard
-                  key={link.id}
-                  link={link}
-                  onEdit={setEditingLink}
-                  onDelete={async (id) => {
-                    if (!window.confirm("Excluir link?")) return;
-                    await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
-                    fetchLinks();
-                  }}
-                />
-              ))}
-            </div>
-          </SortableContext>
-          <DragOverlay>
-            {activeId ? <SortableCard link={activeLink} isOverlay /> : null}
-          </DragOverlay>
-        </DndContext>
+                <DndContext
+
+                  sensors={sensors}
+
+                  collisionDetection={closestCorners}
+
+                  onDragStart={(event) => setActiveId(event.active.id)}
+
+                  onDragEnd={handleDragEnd}
+
+                >
+
+                <div className="space-y-6">
+
+                    {/* Uncategorized Links */}            {(() => {
+
+                        const uncategorized = filteredLinks.filter(l => !l.tags || l.tags.length === 0);
+
+                        if (uncategorized.length === 0) return null;
+
+                        const isCollapsed = collapsedCategories.has('uncategorized');
+
+                        const sortableIds = uncategorized.map(l => `uncat-${l.id}`);
+
+                        
+
+                        return (
+
+                            <div className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+
+                                <button 
+
+                                    onClick={() => {
+
+                                        const newSet = new Set(collapsedCategories);
+
+                                        if (isCollapsed) newSet.delete('uncategorized');
+
+                                        else newSet.add('uncategorized');
+
+                                        setCollapsedCategories(newSet);
+
+                                    }}
+
+                                    className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+
+                                >
+
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+
+                                        <Tag size={16} /> Sem Categoria
+
+                                        <span className="text-xs font-normal text-slate-400 ml-2">({uncategorized.length})</span>
+
+                                    </h3>
+
+                                    {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+
+                                </button>
+
+                                
+
+                                {!isCollapsed && (
+
+                                    <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+
+                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                            {uncategorized.map(link => (
+
+                                                <SortableCard 
+
+                                                    key={link.id} 
+
+                                                    id={`uncat-${link.id}`}
+
+                                                    link={link} 
+
+                                                    onEdit={handleEditLink} 
+
+                                                    onDelete={async (id) => {
+
+                                                        if (!window.confirm("Excluir link?")) return;
+
+                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+
+                                                        fetchLinks();
+
+                                                    }}
+
+                                                />
+
+                                            ))}
+
+                                        </div>
+
+                                    </SortableContext>
+
+                                )}
+
+                            </div>
+
+                        );
+
+                    })()}
+
+        
+
+                    {/* Tagged Links */}            {tags.map(tag => {
+
+                        const tagLinks = filteredLinks.filter(l => l.tags && l.tags.some(t => t.id === tag.id));
+
+                        if (tagLinks.length === 0) return null;
+
+                        const isCollapsed = collapsedCategories.has(tag.id);
+
+                        const sortableIds = tagLinks.map(l => `tag-${tag.id}-${l.id}`);
+
+        
+
+                        return (
+
+                            <div key={tag.id} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+
+                                 <button 
+
+                                    onClick={() => {
+
+                                        const newSet = new Set(collapsedCategories);
+
+                                        if (isCollapsed) newSet.delete(tag.id);
+
+                                        else newSet.add(tag.id);
+
+                                        setCollapsedCategories(newSet);
+
+                                    }}
+
+                                    className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+
+                                >
+
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+
+                                        {tag.name}
+
+                                        <span className="text-xs font-normal text-slate-400 ml-2">({tagLinks.length})</span>
+
+                                    </h3>
+
+                                    {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+
+                                </button>
+
+                                
+
+                                {!isCollapsed && (
+
+                                     <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+
+                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                            {tagLinks.map(link => (
+
+                                                <SortableCard 
+
+                                                    key={`${tag.id}-${link.id}`} 
+
+                                                    id={`tag-${tag.id}-${link.id}`}
+
+                                                    link={link} 
+
+                                                    onEdit={handleEditLink} 
+
+                                                    onDelete={async (id) => {
+
+                                                        if (!window.confirm("Excluir link?")) return;
+
+                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+
+                                                        fetchLinks();
+
+                                                    }}
+
+                                                />
+
+                                            ))}
+
+                                        </div>
+
+                                    </SortableContext>
+
+                                )}
+
+                            </div>
+
+                        );
+
+                    })}
+
+                </div>
+
+                <DragOverlay>
+
+                    {activeId ? (
+
+                         <SortableCard 
+
+                            id={activeId} 
+
+                            link={links.find(l => {
+
+                                // Try to parse ID to find link
+
+                                const parts = activeId.split('-');
+
+                                const id = parts[0] === 'uncat' ? parts[1] : parts[2];
+
+                                return l.id === parseInt(id);
+
+                            })} 
+
+                            isOverlay 
+
+                         />
+
+                    ) : null}
+
+                </DragOverlay>
+
+                </DndContext>
       </main>
 
       {(isModalOpen || editingLink) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <form
             onSubmit={handleSaveLink}
-            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300"
+            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto"
           >
             <h2 className="font-black text-xl mb-6 dark:text-white">
               {editingLink ? "Editar Link" : "Novo Link"}
@@ -608,6 +880,48 @@ export default function LinkManager() {
                 required
                 className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
               />
+              
+              <div className="space-y-2">
+                 <label className="text-xs font-bold text-slate-400 uppercase ml-1">Tags</label>
+                 <div className="flex flex-wrap gap-2">
+                    {tags.map(tag => {
+                        const isSelected = selectedTagIds.has(tag.id);
+                        return (
+                            <label key={tag.id} className={`cursor-pointer px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${isSelected ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}>
+                                <input 
+                                    type="checkbox" 
+                                    name="tags" 
+                                    value={tag.id} 
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                        const newSet = new Set(selectedTagIds);
+                                        if (e.target.checked) newSet.add(tag.id);
+                                        else newSet.delete(tag.id);
+                                        setSelectedTagIds(newSet);
+                                    }}
+                                    className="hidden"
+                                />
+                                {tag.name}
+                            </label>
+                        )
+                    })}
+                    <div className="flex items-center gap-2">
+                         <input 
+                            id="newTagInput"
+                            placeholder="Nova tag..."
+                            className="px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-transparent text-xs outline-none focus:border-blue-500 dark:text-white w-24"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleCreateTag(e.currentTarget.value);
+                                    e.currentTarget.value = '';
+                                }
+                            }}
+                         />
+                    </div>
+                 </div>
+              </div>
+
             </div>
             <div className="flex gap-4 mt-8">
               <button

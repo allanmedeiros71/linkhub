@@ -106,6 +106,19 @@ const initDB = async () => {
         order_index INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS tags (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(50) NOT NULL,
+        color VARCHAR(20) DEFAULT '#3b82f6'
+      );
+
+      CREATE TABLE IF NOT EXISTS link_tags (
+        link_id INTEGER REFERENCES links(id) ON DELETE CASCADE,
+        tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+        PRIMARY KEY (link_id, tag_id)
+      );
       
       CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL COLLATE "default",
@@ -478,15 +491,75 @@ app.put("/api/users/:id/theme", ensureAuthenticated, async (req, res) => {
   }
 });
 
+// --- TAGS API ---
+
+app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
+    if (parseInt(req.params.userId) !== req.user.id)
+        return res.status(403).json({ error: "Forbidden" });
+
+    try {
+        const result = await pool.query(
+            "SELECT * FROM tags WHERE user_id = $1 ORDER BY name ASC",
+            [req.params.userId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/tags", ensureAuthenticated, async (req, res) => {
+    const { name, color } = req.body;
+    try {
+        const result = await pool.query(
+            "INSERT INTO tags (user_id, name, color) VALUES ($1, $2, $3) RETURNING *",
+            [req.user.id, name, color || '#3b82f6']
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete("/api/tags/:id", ensureAuthenticated, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "DELETE FROM tags WHERE id = $1 AND user_id = $2 RETURNING *",
+      [req.params.id, req.user.id],
+    );
+    if (result.rowCount === 0)
+      return res
+        .status(404)
+        .json({ error: "Tag not found or permission denied" });
+    res.json({ message: "Tag removida" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// --- LINKS API ---
+
 app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
   if (parseInt(req.params.userId) !== req.user.id)
     return res.status(403).json({ error: "Forbidden" });
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM links WHERE user_id = $1 ORDER BY order_index ASC",
-      [req.params.userId],
-    );
+    const query = `
+      SELECT l.*, 
+      COALESCE(
+        json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+        FILTER (WHERE t.id IS NOT NULL), 
+        '[]'
+      ) as tags
+      FROM links l
+      LEFT JOIN link_tags lt ON l.id = lt.link_id
+      LEFT JOIN tags t ON lt.tag_id = t.id
+      WHERE l.user_id = $1
+      GROUP BY l.id
+      ORDER BY l.order_index ASC
+    `;
+    const result = await pool.query(query, [req.params.userId]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -494,36 +567,107 @@ app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
 });
 
 app.post("/api/links", ensureAuthenticated, async (req, res) => {
-  const { user_id, title, url, order_index } = req.body;
+  const { user_id, title, url, order_index, tags } = req.body;
   if (parseInt(user_id) !== req.user.id)
     return res.status(403).json({ error: "Forbidden" });
 
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       "INSERT INTO links (user_id, title, url, order_index) VALUES ($1, $2, $3, $4) RETURNING *",
       [user_id, title, url, order_index],
     );
-    res.json(result.rows[0]);
+    const link = result.rows[0];
+
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+        for (const tagId of tags) {
+            await client.query(
+                "INSERT INTO link_tags (link_id, tag_id) VALUES ($1, $2)",
+                [link.id, tagId]
+            );
+        }
+    }
+    
+    // Fetch complete link with tags to return consistent structure
+    const finalResult = await client.query(`
+        SELECT l.*, 
+        COALESCE(
+            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+            FILTER (WHERE t.id IS NOT NULL), 
+            '[]'
+        ) as tags
+        FROM links l
+        LEFT JOIN link_tags lt ON l.id = lt.link_id
+        LEFT JOIN tags t ON lt.tag_id = t.id
+        WHERE l.id = $1
+        GROUP BY l.id
+    `, [link.id]);
+
+    await client.query('COMMIT');
+    res.json(finalResult.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
 app.put("/api/links/:id", ensureAuthenticated, async (req, res) => {
-  const { title, url, order_index } = req.body;
-  // TODO: Verificar se o link pertence ao usuario
+  const { title, url, order_index, tags } = req.body;
+  
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       "UPDATE links SET title = $1, url = $2, order_index = $3 WHERE id = $4 AND user_id = $5 RETURNING *",
       [title, url, order_index, req.params.id, req.user.id],
     );
-    if (result.rows.length === 0)
-      return res
-        .status(404)
-        .json({ error: "Link not found or permission denied" });
-    res.json(result.rows[0]);
+    
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: "Link not found or permission denied" });
+    }
+
+    const link = result.rows[0];
+
+    // Update tags: Remove all old ones, insert new ones
+    await client.query("DELETE FROM link_tags WHERE link_id = $1", [link.id]);
+
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+        for (const tagId of tags) {
+            await client.query(
+                "INSERT INTO link_tags (link_id, tag_id) VALUES ($1, $2)",
+                [link.id, tagId]
+            );
+        }
+    }
+
+    // Fetch complete link
+     const finalResult = await client.query(`
+        SELECT l.*, 
+        COALESCE(
+            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+            FILTER (WHERE t.id IS NOT NULL), 
+            '[]'
+        ) as tags
+        FROM links l
+        LEFT JOIN link_tags lt ON l.id = lt.link_id
+        LEFT JOIN tags t ON lt.tag_id = t.id
+        WHERE l.id = $1
+        GROUP BY l.id
+    `, [link.id]);
+
+    await client.query('COMMIT');
+    res.json(finalResult.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
