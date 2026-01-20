@@ -35,16 +35,12 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Configuração da ligação ao PostgreSQL
-const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?sslmode=require`;
+const isProduction = process.env.NODE_ENV === "production";
+const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${isProduction ? "?sslmode=require" : ""}`;
 
 const pool = new Pool({
   connectionString,
-  ssl: {
-    rejectUnauthorized: false // Neon certificates are valid, but this helps avoiding self-signed issues if any intermediary exists or node strictness. 
-                              // Actually, for Neon, 'true' or proper CA is best, but usually rejectUnauthorized: false is the quick fix for "self signed" errors.
-                              // The error "connection is insecure" means we weren't even trying SSL. 
-                              // Using sslmode=require in connection string AND ssl object is robust.
-  }
+  ssl: isProduction ? { rejectUnauthorized: false } : undefined,
 });
 
 // Inicialização das tabelas e migrações
