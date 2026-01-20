@@ -7,6 +7,11 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import bcrypt from "bcryptjs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const { Pool } = pkg;
 const app = express();
@@ -26,7 +31,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // set to true if https
+      secure: process.env.SESSION_SECURE ? process.env.SESSION_SECURE === "true" : process.env.NODE_ENV === "production", // set to true if https
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   }),
@@ -35,12 +40,12 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Configuração da ligação ao PostgreSQL
-const isProduction = process.env.NODE_ENV === "production";
-const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${isProduction ? "?sslmode=require" : ""}`;
+const useSSL = process.env.DB_SSL === "true" || (process.env.NODE_ENV === "production" && process.env.DB_SSL !== "false");
+const connectionString = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}${useSSL ? "?sslmode=require" : ""}`;
 
 const pool = new Pool({
   connectionString,
-  ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+  ssl: useSSL ? { rejectUnauthorized: false } : undefined,
 });
 
 // Inicialização das tabelas e migrações
@@ -371,6 +376,15 @@ app.delete("/api/links/:id", ensureAuthenticated, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Serve static assets in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "dist", "index.html"));
+  });
+}
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.git
+.gitignore
+docker-compose.yaml
+README.md
+Documentação Inicial do Projeto
