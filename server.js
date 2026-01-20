@@ -162,6 +162,9 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tags' AND column_name='order_index') THEN
           ALTER TABLE tags ADD COLUMN order_index INTEGER DEFAULT 0;
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='link_tags' AND column_name='order_index') THEN
+          ALTER TABLE link_tags ADD COLUMN order_index INTEGER DEFAULT 0;
+        END IF;
         ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
@@ -576,6 +579,42 @@ app.delete("/api/tags/:id", ensureAuthenticated, async (req, res) => {
   }
 });
 
+app.put("/api/tags/:id/reorder", ensureAuthenticated, async (req, res) => {
+    const { linkIds } = req.body;
+    const tagId = parseInt(req.params.id);
+
+    if (!Array.isArray(linkIds)) {
+        return res.status(400).json({ error: "linkIds must be an array" });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // Verify ownership of the tag (optional but good security)
+        const tagCheck = await client.query("SELECT id FROM tags WHERE id = $1 AND user_id = $2", [tagId, req.user.id]);
+        if (tagCheck.rows.length === 0) {
+            throw new Error("Tag not found or permission denied");
+        }
+
+        for (let i = 0; i < linkIds.length; i++) {
+            const linkId = linkIds[i];
+            await client.query(
+                "UPDATE link_tags SET order_index = $1 WHERE tag_id = $2 AND link_id = $3",
+                [i, tagId, linkId]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ message: "Order updated" });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 
 // --- LINKS API ---
 
@@ -587,7 +626,7 @@ app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
     const query = `
       SELECT l.*, 
       COALESCE(
-        json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+        json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color, 'order_index', lt.order_index)) 
         FILTER (WHERE t.id IS NOT NULL), 
         '[]'
       ) as tags
@@ -629,11 +668,10 @@ app.post("/api/links", ensureAuthenticated, async (req, res) => {
         }
     }
     
-    // Fetch complete link with tags to return consistent structure
     const finalResult = await client.query(`
         SELECT l.*, 
         COALESCE(
-            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color, 'order_index', lt.order_index)) 
             FILTER (WHERE t.id IS NOT NULL), 
             '[]'
         ) as tags
@@ -689,7 +727,7 @@ app.put("/api/links/:id", ensureAuthenticated, async (req, res) => {
      const finalResult = await client.query(`
         SELECT l.*, 
         COALESCE(
-            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color)) 
+            json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color, 'order_index', lt.order_index)) 
             FILTER (WHERE t.id IS NOT NULL), 
             '[]'
         ) as tags

@@ -467,45 +467,114 @@ export default function LinkManager() {
         return;
     }
 
+    // Handle Link Reordering
     if (active.id !== over.id) {
-      // Parse IDs to get real Link IDs
-      const getLinkId = (id) => {
-          const parts = id.toString().split('-');
-          // IDs are 'uncat-{id}' or 'tag-{tagId}-{id}'
-          return parseInt(parts[parts.length - 1]);
-      }
+        const activeStr = active.id.toString();
+        const overStr = over.id.toString();
 
-      const activeLinkId = getLinkId(active.id);
-      const overLinkId = getLinkId(over.id);
+        // Check if we are in a categorized context
+        if (activeStr.startsWith('tag-') && overStr.startsWith('tag-')) {
+            const [, activeTagIdStr, activeLinkIdStr] = activeStr.split('-');
+            const [, overTagIdStr, overLinkIdStr] = overStr.split('-');
+            
+            const activeTagId = parseInt(activeTagIdStr);
+            const overTagId = parseInt(overTagIdStr);
+            const activeLinkId = parseInt(activeLinkIdStr);
+            const overLinkId = parseInt(overLinkIdStr);
 
-      const oldIndex = links.findIndex((l) => l.id === activeLinkId);
-      const newIndex = links.findIndex((l) => l.id === overLinkId);
+            // Only allow reordering within the SAME tag
+            if (activeTagId === overTagId) {
+                // Get links for this tag, sorted by their current tag order
+                const tagLinks = links
+                    .filter(l => l.tags && l.tags.some(t => t.id === activeTagId))
+                    .sort((a, b) => {
+                        const tagA = a.tags.find(t => t.id === activeTagId);
+                        const tagB = b.tags.find(t => t.id === activeTagId);
+                        return (tagA?.order_index || 0) - (tagB?.order_index || 0);
+                    });
+
+                const oldIndex = tagLinks.findIndex(l => l.id === activeLinkId);
+                const newIndex = tagLinks.findIndex(l => l.id === overLinkId);
+
+                if (oldIndex !== -1 && newIndex !== -1) {
+                    // Reorder the subset
+                    const newTagLinks = arrayMove(tagLinks, oldIndex, newIndex);
+                    
+                    // Update local state: Update order_index inside the tags array for these links
+                    setLinks(prevLinks => {
+                        return prevLinks.map(link => {
+                            const inSubsetIndex = newTagLinks.findIndex(l => l.id === link.id);
+                            if (inSubsetIndex !== -1) {
+                                // This link is part of the reordered set. Update its tag order_index.
+                                const newTags = link.tags.map(t => {
+                                    if (t.id === activeTagId) {
+                                        return { ...t, order_index: inSubsetIndex };
+                                    }
+                                    return t;
+                                });
+                                return { ...link, tags: newTags };
+                            }
+                            return link;
+                        });
+                    });
+
+                    // Send to Backend
+                    const linkIds = newTagLinks.map(l => l.id);
+                    try {
+                        await fetch(`${API_URL}/tags/${activeTagId}/reorder`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "include",
+                            body: JSON.stringify({ linkIds })
+                        });
+                    } catch (err) {
+                        console.error("Failed to reorder tag links", err);
+                        fetchLinks();
+                    }
+                }
+            }
+            return;
+        }
+
+        // Global / Uncategorized Reordering (Fallback to old behavior or simple list)
+        // Parse IDs to get real Link IDs
+        const getLinkId = (id) => {
+            const parts = id.toString().split('-');
+            // IDs are 'uncat-{id}' or 'tag-{tagId}-{id}' (though tag logic handled above) or just '{id}'
+            return parseInt(parts[parts.length - 1]);
+        }
+
+        const activeLinkId = getLinkId(active.id);
+        const overLinkId = getLinkId(over.id);
+
+        const oldIndex = links.findIndex((l) => l.id === activeLinkId);
+        const newIndex = links.findIndex((l) => l.id === overLinkId);
       
-      if (oldIndex !== -1 && newIndex !== -1) {
-          const newOrder = arrayMove(links, oldIndex, newIndex);
-          setLinks(newOrder.map((link, i) => ({ ...link, order_index: i })));
+        if (oldIndex !== -1 && newIndex !== -1) {
+            const newOrder = arrayMove(links, oldIndex, newIndex);
+            setLinks(newOrder.map((link, i) => ({ ...link, order_index: i })));
 
-          try {
-            const promises = newOrder.map((link, i) => {
-              // Prepare payload: Extract tag IDs if tags exist
-              const payload = { 
-                  ...link, 
-                  order_index: i,
-                  tags: link.tags ? link.tags.map(t => t.id) : [] 
-              };
+            try {
+                const promises = newOrder.map((link, i) => {
+                // Prepare payload: Extract tag IDs if tags exist
+                const payload = { 
+                    ...link, 
+                    order_index: i,
+                    tags: link.tags ? link.tags.map(t => t.id) : [] 
+                };
               
-              return fetch(`${API_URL}/links/${link.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify(payload),
-              });
-            });
-            await Promise.all(promises);
-          } catch (err) {
-            fetchLinks();
-          }
-      }
+                return fetch(`${API_URL}/links/${link.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(payload),
+                });
+                });
+                await Promise.all(promises);
+            } catch (err) {
+                fetchLinks();
+            }
+        }
     }
   };
 
@@ -877,131 +946,163 @@ export default function LinkManager() {
 
                 
 
-                                                    {tags.map(tag => {
+                                                                                        {tags.map(tag => {
 
                 
 
-                                                        const tagLinks = filteredLinks.filter(l => l.tags && l.tags.some(t => t.id === tag.id));
+                                                                                            // Filter and Sort links for this tag
 
                 
 
-                                                        const sortableIds = tagLinks.map(l => `tag-${tag.id}-${l.id}`);
+                                                                                            const tagLinks = filteredLinks
 
                 
 
-                                
+                                                                                                .filter(l => l.tags && l.tags.some(t => t.id === tag.id))
 
                 
 
-                                                        return (
+                                                                                                .sort((a, b) => {
 
                 
 
-                                                            <SortableTagSection 
+                                                                                                    const tagA = a.tags.find(t => t.id === tag.id);
 
                 
 
-                                                                key={tag.id} 
+                                                                                                    const tagB = b.tags.find(t => t.id === tag.id);
 
                 
 
-                                                                tag={tag} 
+                                                                                                    return (tagA?.order_index || 0) - (tagB?.order_index || 0);
 
                 
 
-                                                                count={tagLinks.length}
+                                                                                                });
 
                 
 
-                                                                collapsedCategories={collapsedCategories} 
+                                                    
 
                 
 
-                                                                setCollapsedCategories={setCollapsedCategories}
+                                                                                            const sortableIds = tagLinks.map(l => `tag-${tag.id}-${l.id}`);
 
                 
 
-                                                            >
+                                                    
 
                 
 
-                                                                <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+                                                                                            return (
 
                 
 
-                                                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                                                                <SortableTagSection 
 
                 
 
-                                                                        {tagLinks.map(link => (
+                                                                                                    key={tag.id} 
 
                 
 
-                                                                            <SortableCard 
+                                                                                                    tag={tag} 
 
                 
 
-                                                                                key={`${tag.id}-${link.id}`} 
+                                                                                                    count={tagLinks.length}
 
                 
 
-                                                                                id={`tag-${tag.id}-${link.id}`}
+                                                                                                    collapsedCategories={collapsedCategories} 
 
                 
 
-                                                                                link={link} 
+                                                                                                    setCollapsedCategories={setCollapsedCategories}
 
                 
 
-                                                                                onEdit={handleEditLink} 
+                                                                                                >
 
                 
 
-                                                                                onDelete={async (id) => {
+                                                                                                    <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
 
                 
 
-                                                                                    if (!window.confirm("Excluir link?")) return;
+                                                                                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
                 
 
-                                                                                    await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+                                                                                                            {tagLinks.map(link => (
 
                 
 
-                                                                                    fetchLinks();
+                                                                                                                <SortableCard 
 
                 
 
-                                                                                }}
+                                                                                                                    key={`${tag.id}-${link.id}`} 
 
                 
 
-                                                                            />
+                                                                                                                    id={`tag-${tag.id}-${link.id}`}
 
                 
 
-                                                                        ))}
+                                                                                                                    link={link} 
 
                 
 
-                                                                    </div>
+                                                                                                                    onEdit={handleEditLink} 
 
                 
 
-                                                                </SortableContext>
+                                                                                                                    onDelete={async (id) => {
 
                 
 
-                                                            </SortableTagSection>
+                                                                                                                        if (!window.confirm("Excluir link?")) return;
 
                 
 
-                                                        );
+                                                                                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
 
                 
 
-                                                    })}
+                                                                                                                        fetchLinks();
+
+                
+
+                                                                                                                    }}
+
+                
+
+                                                                                                                />
+
+                
+
+                                                                                                            ))}
+
+                
+
+                                                                                                        </div>
+
+                
+
+                                                                                                    </SortableContext>
+
+                
+
+                                                                                                </SortableTagSection>
+
+                
+
+                                                                                            );
+
+                
+
+                                                                                        })}
 
                 
 
