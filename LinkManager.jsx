@@ -151,7 +151,7 @@ function SortableTagSection({ tag, count, children, collapsedCategories, setColl
   const isCollapsed = collapsedCategories.has(tag.id);
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div ref={setNodeRef} style={style} className="bg-white/80 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <button 
             {...attributes} 
             {...listeners}
@@ -204,13 +204,41 @@ export default function LinkManager() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const THEMES = [
+    { id: 'light', name: 'Light', color: '#f8fafc', type: 'light' },
+    { id: 'dark', name: 'Dark', color: '#0f172a', type: 'dark' },
+    { id: 'dracula', name: 'Dracula', color: '#282a36', type: 'dark' },
+    { id: 'apple', name: 'Apple', color: '#f5f5f7', type: 'light' },
+    { id: 'caffeine', name: 'Caffeine', color: '#201612', type: 'dark' },
+    { id: 'catppuccin-latte', name: 'Latte', color: '#eff1f5', type: 'light' },
+    { id: 'catppuccin-frappe', name: 'Frappé', color: '#303446', type: 'dark' },
+    { id: 'catppuccin-macchiato', name: 'Macchiato', color: '#24273a', type: 'dark' },
+    { id: 'catppuccin-mocha', name: 'Mocha', color: '#1e1e2e', type: 'dark' },
+    { id: 'nord', name: 'Nord', color: '#2e3440', type: 'dark' },
+    { id: 'cyberpunk', name: 'Cyberpunk', color: '#050505', type: 'dark', border: '#00f0ff' },
+    { id: 'forest', name: 'Forest', color: '#052e16', type: 'dark' },
+    { id: 'ocean', name: 'Ocean', color: '#0c4a6e', type: 'dark' },
+  ];
+
   useEffect(() => {
     const root = window.document.documentElement;
-    if (theme === "dark") {
+    
+    // Reset
+    root.classList.remove("dark");
+    root.removeAttribute('data-theme');
+    
+    // Determine type
+    const selectedTheme = THEMES.find(t => t.id === theme);
+    const isDark = selectedTheme ? selectedTheme.type === 'dark' : theme === 'dark'; // fallback
+    
+    if (isDark) {
       root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
     }
+
+    if (theme !== 'light' && theme !== 'dark') {
+      root.setAttribute('data-theme', theme);
+    }
+    
     localStorage.setItem("theme", theme);
   }, [theme]);
 
@@ -222,18 +250,12 @@ export default function LinkManager() {
   useEffect(() => {
     if (user) {
       if (themeChangedRef.current) {
-        if (user.theme !== theme) {
-          fetch(`${API_URL}/users/${user.id}/theme`, {
-            method: "PUT",
-            headers: { 
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({ theme: theme }),
-          }).catch(() => console.error("Erro ao sincronizar tema."));
-        }
+        // Theme sync is handled in handleThemeChange now to avoid race conditions or dependency loops
+        // But we keep this check if needed for other syncs
       } else {
-        setTheme(user.theme || "light");
+        // Initial load: prefer user theme from DB over local storage if available?
+        // Actually, usually user preference from DB wins on login.
+        if (user.theme) setTheme(user.theme);
       }
       fetchLinks();
       fetchTags();
@@ -351,9 +373,8 @@ export default function LinkManager() {
     }
   };
 
-  const toggleTheme = async () => {
+  const handleThemeChange = async (newTheme) => {
     themeChangedRef.current = true;
-    const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     if (user) {
       try {
@@ -367,6 +388,14 @@ export default function LinkManager() {
         console.error("Erro ao salvar tema no banco.");
       }
     }
+  };
+
+  const toggleTheme = () => {
+      // Toggle logic now mainly for the navbar quick switch (Light <-> Dark)
+      // If a custom theme is active, we default to switching to the 'opposite' base type
+      const currentType = THEMES.find(t => t.id === theme)?.type || 'light';
+      const newTheme = currentType === 'light' ? 'dark' : 'light';
+      handleThemeChange(newTheme);
   };
 
   const handleCreateTag = async (name) => {
@@ -684,7 +713,7 @@ export default function LinkManager() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 pb-20 font-sans">
-      <nav className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+      <nav className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-black text-xl text-blue-600">
             <LinkIcon />{" "}
@@ -846,7 +875,7 @@ export default function LinkManager() {
 
                                     return (
 
-                                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                        <div className="bg-white/80 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
                                             <button 
 
@@ -1309,6 +1338,25 @@ export default function LinkManager() {
                   placeholder="https://exemplo.com/foto.jpg"
                   className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-2 ml-1 uppercase tracking-wider">Tema</label>
+                <div className="grid grid-cols-5 gap-2">
+                    {THEMES.map(t => (
+                        <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => handleThemeChange(t.id)}
+                            className={`h-10 rounded-xl border-2 transition-all ${theme === t.id ? 'border-blue-500 scale-110 shadow-lg' : 'border-slate-200 dark:border-slate-700 hover:scale-105'}`}
+                            style={{ backgroundColor: t.color, borderColor: t.border || (theme === t.id ? undefined : 'transparent') }}
+                            title={t.name}
+                        />
+                    ))}
+                </div>
+                <p className="text-center text-xs text-slate-400 mt-2 font-medium">
+                    {THEMES.find(t => t.id === theme)?.name}
+                </p>
               </div>
 
               <div>
