@@ -110,9 +110,9 @@ Este projeto está sob a licença MIT.
 
 - [x] **Autenticação Real**: Implementado login com Google, GitHub e Local (bcrypt).
 - [x] **Banco de Dados**: Migração de Firebase para PostgreSQL concluída.
-- [ ] **Temas Dinâmicos**: Seletor de tema com persistência no banco de dados.
+- [x] **Temas Dinâmicos**: Seletor de tema com persistência no banco de dados.
 - [x] **Landing Page**: Página de apresentação criada.
 - [x] **Deploy em Containers**: Configuração final do Docker para a aplicação (Dockerfile da app) - _O banco já está containerizado._
 - [ ] **Notificações (Toasts)**: Melhorar feedback visual de erros/sucesso.
-- Inserir ícones. Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
-- Inserir abas
+- [ ] **Inserir ícones.** Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
+- [ ] **Inserir abas.**
