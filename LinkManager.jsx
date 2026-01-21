@@ -40,6 +40,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "react-hot-toast";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 const API_URL = `${BACKEND_URL}/api`;
@@ -333,9 +334,9 @@ export default function LinkManager() {
       const updatedUser = await response.json();
       setUser({ ...user, ...updatedUser });
       setIsSettingsOpen(false);
-      alert("Perfil atualizado com sucesso!");
+      toast.success("Perfil atualizado com sucesso!");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -358,6 +359,7 @@ export default function LinkManager() {
       setUser(userData);
     } catch (err) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -368,8 +370,10 @@ export default function LinkManager() {
       await fetch(`${API_URL}/logout`, { method: "POST", credentials: "include" });
       setUser(null);
       setLinks([]);
+      toast.success("Logout realizado com sucesso!");
     } catch (err) {
       console.error("Logout failed");
+      toast.error("Erro ao sair.");
     }
   };
 
@@ -408,9 +412,11 @@ export default function LinkManager() {
         });
         if (response.ok) {
             fetchTags();
+            toast.success("Tag criada!");
         }
     } catch (err) {
         console.error("Error creating tag");
+        toast.error("Erro ao criar tag.");
     }
   };
 
@@ -454,8 +460,21 @@ export default function LinkManager() {
       setIsModalOpen(false);
       setEditingLink(null);
       fetchLinks();
+      toast.success(editingLink ? "Link atualizado!" : "Link criado!");
     } catch (err) {
+      toast.error("Falha ao salvar.");
       setError("Falha ao salvar.");
+    }
+  };
+
+  const handleDeleteLink = async (id) => {
+    if (!window.confirm("Excluir link?")) return;
+    try {
+        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+        toast.success("Link removido!");
+        fetchLinks();
+    } catch (err) {
+        toast.error("Erro ao excluir link.");
     }
   };
 
@@ -835,15 +854,7 @@ export default function LinkManager() {
 
                                       onEdit={handleEditLink}
 
-                                      onDelete={async (id) => {
-
-                                        if (!window.confirm("Excluir link?")) return;
-
-                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
-
-                                        fetchLinks();
-
-                                      }}
+                                      onDelete={handleDeleteLink}
 
                                     />
 
@@ -927,15 +938,7 @@ export default function LinkManager() {
 
                                                                 onEdit={handleEditLink} 
 
-                                                                onDelete={async (id) => {
-
-                                                                    if (!window.confirm("Excluir link?")) return;
-
-                                                                    await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
-
-                                                                    fetchLinks();
-
-                                                                }}
+                                                                onDelete={handleDeleteLink}
 
                                                             />
 
@@ -1087,23 +1090,7 @@ export default function LinkManager() {
 
                 
 
-                                                                                                                    onDelete={async (id) => {
-
-                
-
-                                                                                                                        if (!window.confirm("Excluir link?")) return;
-
-                
-
-                                                                                                                        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
-
-                
-
-                                                                                                                        fetchLinks();
-
-                
-
-                                                                                                                    }}
+                                                                                                                                                                                                                                        onDelete={handleDeleteLink}
 
                 
 
