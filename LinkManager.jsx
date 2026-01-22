@@ -103,7 +103,7 @@ function SortableCard({ id, link, onEdit, onDelete, isOverlay }) {
       </div>
 
       <div
-        className={`absolute right-2 top-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg p-0.5 ${
+        className={`absolute right-2 top-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 shadow-sm rounded-lg p-0.5 ${
           isOverlay ? "hidden" : ""
         }`}
       >
@@ -215,6 +215,7 @@ export default function LinkManager() {
     { id: 'catppuccin-frappe', name: 'Frappé', color: '#303446', type: 'dark' },
     { id: 'catppuccin-macchiato', name: 'Macchiato', color: '#24273a', type: 'dark' },
     { id: 'catppuccin-mocha', name: 'Mocha', color: '#1e1e2e', type: 'dark' },
+    { id: 'pink', name: 'Pink', color: '#1f1118', type: 'dark' },
     { id: 'nord', name: 'Nord', color: '#2e3440', type: 'dark' },
     { id: 'cyberpunk', name: 'Cyberpunk', color: '#050505', type: 'dark', border: '#00f0ff' },
     { id: 'forest', name: 'Forest', color: '#052e16', type: 'dark' },

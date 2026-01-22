@@ -12,7 +12,7 @@
 }
 
 :root {
-  /* Default Slate */
+  /* Default Slate (Cool Grey) */
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
@@ -44,16 +44,16 @@
 /* Dracula */
 [data-theme='dracula'] {
   --color-slate-50: #f8f8f2;
-  --color-slate-100: #f8f8f2;
-  --color-slate-200: #6272a4;
+  --color-slate-100: #ffffff;
+  --color-slate-200: #bd93f9;
   --color-slate-300: #6272a4;
-  --color-slate-400: #6272a4;
-  --color-slate-500: #6272a4;
+  --color-slate-400: #9ca3af;
+  --color-slate-500: #6272a4; /* dark:text-slate-500 (URL) */
   --color-slate-600: #44475a;
   --color-slate-700: #44475a;
-  --color-slate-800: #282a36; /* Card/Container BG */
-  --color-slate-900: #21222c; /* Nav/Surface */
-  --color-slate-950: #191a21; /* Main BG */
+  --color-slate-800: #282a36; 
+  --color-slate-900: #21222c; 
+  --color-slate-950: #191a21;
 
   --color-blue-100: #ff79c6;
   --color-blue-500: #bd93f9;
@@ -64,12 +64,12 @@
 
 /* Caffeine (Coffee) */
 [data-theme='caffeine'] {
-  --color-slate-50: #f0e6dd;
-  --color-slate-100: #e2d3c5;
-  --color-slate-200: #9c8475;
-  --color-slate-300: #856d5e;
-  --color-slate-400: #856d5e;
-  --color-slate-500: #6b5346;
+  --color-slate-50: #f8f0e3;
+  --color-slate-100: #ffffff;
+  --color-slate-200: #dcbfa6;
+  --color-slate-300: #9c8475;
+  --color-slate-400: #a89f91;
+  --color-slate-500: #9c8475; /* Subtext URL */
   --color-slate-600: #544035;
   --color-slate-700: #4a372e;
   --color-slate-800: #3d2d25;
@@ -83,24 +83,50 @@
   --color-blue-900: #3d2d25;
 }
 
+/* Pink (Rose) */
+[data-theme='pink'] {
+  --color-slate-50: #fff1f2;
+  --color-slate-100: #ffffff;
+  --color-slate-200: #fecdd3;
+  --color-slate-300: #fda4af;
+  --color-slate-400: #fb7185;
+  --color-slate-500: #fb7185; /* Subtext */
+  --color-slate-600: #e11d48;
+  --color-slate-700: #be123c;
+  --color-slate-800: #881337;
+  --color-slate-900: #831843;
+  --color-slate-950: #4c0519;
+
+  --color-blue-100: #ffe4e6;
+  --color-blue-500: #fb7185;
+  --color-blue-600: #f43f5e;
+  --color-blue-700: #e11d48;
+  --color-blue-900: #881337;
+}
+
 /* --- CATPPUCCIN FLAVORS --- */
 
-/* 🌻 Latte (Light) */
+/* 🌻 Latte (Light) - Corrected Scale */
 [data-theme='catppuccin-latte'] {
-  --color-slate-50: #eff1f5;  /* Base */
-  --color-slate-100: #bcc0cc; /* Text/Subtext */
-  --color-slate-200: #ccd0da; /* Surface0 */
-  --color-slate-300: #acb0be; /* Surface2 */
-  --color-slate-400: #9ca0b0; /* Overlay0 */
-  --color-slate-500: #7287fd; /* Blue/Lavender Accent */
-  --color-slate-600: #4c4f69; /* Text */
-  --color-slate-700: #5c5f77; /* Subtext1 */
-  --color-slate-800: #e6e9ef; /* Surface1 (Cards) - Darker than base */
-  --color-slate-900: #dce0e8; /* Crust (Nav) */
-  --color-slate-950: #eff1f5; /* Base (Main BG) */
+  /* Backgrounds: Lightest */
+  --color-slate-50: #eff1f5;  /* Main BG */
+  --color-slate-100: #e6e9ef; /* Button/Input BG */
+  --color-slate-200: #ccd0da; /* Border */
+  
+  /* Midtones */
+  --color-slate-300: #bcc0cc;
+  --color-slate-400: #9ca0b0; /* Subtext (URL) */
+  --color-slate-500: #7287fd;
+  
+  /* Text: Darkest */
+  --color-slate-600: #5c5f77; /* User Button Text */
+  --color-slate-700: #4c4f69;
+  --color-slate-800: #4c4f69; /* Titles */
+  --color-slate-900: #4c4f69; /* Nav Brand */
+  --color-slate-950: #202027; 
 
   --color-blue-100: #7287fd;
-  --color-blue-500: #1e66f5; /* Blue */
+  --color-blue-500: #1e66f5;
   --color-blue-600: #1e66f5;
   --color-blue-700: #7287fd;
   --color-blue-900: #8839ef;
@@ -108,77 +134,76 @@
 
 /* 🪴 Frappé */
 [data-theme='catppuccin-frappe'] {
-  --color-slate-100: #c6d0f5; /* Text */
-  --color-slate-200: #626880; /* Overlay0 */
-  --color-slate-300: #51576d; /* Surface2 */
-  --color-slate-400: #414559; /* Surface1 */
-  --color-slate-500: #737994; /* Overlay1 */
-  --color-slate-600: #292c3c;
-  --color-slate-700: #414559; /* Border/Surface1 */
-  --color-slate-800: #414559; /* Surface1 (Container) */
-  --color-slate-900: #292c3c; /* Mantle (Nav) */
-  --color-slate-950: #303446; /* Base (Main BG) */
+  --color-slate-100: #ffffff;
+  --color-slate-200: #737994;
+  --color-slate-300: #626880;
+  --color-slate-400: #a5adce;
+  --color-slate-500: #a5adce; /* Subtext */
+  --color-slate-600: #414559;
+  --color-slate-700: #414559;
+  --color-slate-800: #414559;
+  --color-slate-900: #292c3c;
+  --color-slate-950: #303446;
 
   --color-blue-100: #8caaee;
-  --color-blue-500: #8caaee; /* Blue */
+  --color-blue-500: #8caaee;
   --color-blue-600: #8caaee;
-  --color-blue-700: #babbf1; /* Lavender */
+  --color-blue-700: #babbf1;
   --color-blue-900: #292c3c;
 }
 
 /* 🌺 Macchiato */
 [data-theme='catppuccin-macchiato'] {
-  --color-slate-100: #cad3f5; /* Text */
-  --color-slate-200: #5b6078; /* Overlay0 */
-  --color-slate-300: #494d64; /* Surface2 */
-  --color-slate-400: #363a4f; /* Surface1 */
-  --color-slate-500: #6e738d; /* Overlay1 */
-  --color-slate-600: #1e2030;
-  --color-slate-700: #363a4f; /* Border */
-  --color-slate-800: #363a4f; /* Surface1 (Container) */
-  --color-slate-900: #1e2030; /* Mantle (Nav) */
-  --color-slate-950: #24273a; /* Base (Main BG) */
+  --color-slate-100: #ffffff;
+  --color-slate-200: #6e738d;
+  --color-slate-300: #5b6078;
+  --color-slate-400: #a5adcb;
+  --color-slate-500: #a5adcb;
+  --color-slate-600: #363a4f;
+  --color-slate-700: #363a4f;
+  --color-slate-800: #363a4f;
+  --color-slate-900: #1e2030;
+  --color-slate-950: #24273a;
 
   --color-blue-100: #8aadf4;
-  --color-blue-500: #8aadf4; /* Blue */
+  --color-blue-500: #8aadf4;
   --color-blue-600: #8aadf4;
-  --color-blue-700: #b7bdf8; /* Lavender */
+  --color-blue-700: #b7bdf8;
   --color-blue-900: #1e2030;
 }
 
 /* 🌿 Mocha */
 [data-theme='catppuccin-mocha'] {
-  --color-slate-100: #cdd6f4; /* Text */
-  --color-slate-200: #585b70; /* Overlay0 */
-  --color-slate-300: #45475a; /* Surface2 */
-  --color-slate-400: #313244; /* Surface1 */
-  --color-slate-500: #45475a;
-  --color-slate-600: #181825;
-  --color-slate-700: #313244; /* Border/Surface0 */
-  --color-slate-800: #313244; /* Surface0 (Container) */
-  --color-slate-900: #181825; /* Mantle (Nav) */
-  --color-slate-950: #1e1e2e; /* Base (Main BG) -> Note: Standard Mocha Base is 1e1e2e, Mantle 181825, Crust 11111b */
+  --color-slate-100: #ffffff;
+  --color-slate-200: #585b70;
+  --color-slate-300: #45475a;
+  --color-slate-400: #bac2de;
+  --color-slate-500: #bac2de;
+  --color-slate-600: #313244;
+  --color-slate-700: #313244;
+  --color-slate-800: #313244;
+  --color-slate-900: #181825;
+  --color-slate-950: #1e1e2e;
 
   --color-blue-100: #89b4fa;
-  --color-blue-500: #89b4fa; /* Blue */
-  --color-blue-600: #cba6f7; /* Mauve (Variant) */
-  --color-blue-700: #b4befe; /* Lavender */
+  --color-blue-500: #89b4fa;
+  --color-blue-600: #cba6f7;
+  --color-blue-700: #b4befe;
   --color-blue-900: #181825;
 }
-
 
 /* Nord */
 [data-theme='nord'] {
   --color-slate-100: #eceff4;
   --color-slate-200: #d8dee9;
   --color-slate-300: #e5e9f0;
-  --color-slate-400: #81a1c1;
-  --color-slate-500: #4c566a;
+  --color-slate-400: #d8dee9;
+  --color-slate-500: #d8dee9; /* Subtext */
   --color-slate-600: #434c5e;
   --color-slate-700: #3b4252;
   --color-slate-800: #2e3440;
-  --color-slate-900: #242933; /* Darker custom */
-  --color-slate-950: #1d2128; /* Darkest */
+  --color-slate-900: #242933; 
+  --color-slate-950: #1d2128;
 
   --color-blue-100: #8fbcbb;
   --color-blue-500: #88c0d0;
@@ -187,33 +212,33 @@
   --color-blue-900: #4c566a;
 }
 
-/* Cyberpunk */
+/* Cyberpunk - Fixed Contrast */
 [data-theme='cyberpunk'] {
-  --color-slate-100: #fcee0a;
+  --color-slate-100: #ffffff;
   --color-slate-200: #00f0ff;
   --color-slate-300: #ff003c;
-  --color-slate-400: #ff003c;
-  --color-slate-500: #141414;
+  --color-slate-400: #00f0ff;
+  --color-slate-500: #00f0ff; /* Fixed: Cyan subtext instead of black */
   --color-slate-600: #1a1a1a;
-  --color-slate-700: #0a0a0a;
-  --color-slate-800: #050505;
-  --color-slate-900: #000000;
+  --color-slate-700: #2a2a2a;
+  --color-slate-800: #101010;
+  --color-slate-900: #050505;
   --color-slate-950: #000000;
 
   --color-blue-100: #ff003c;
   --color-blue-500: #00f0ff;
-  --color-blue-600: #00f0ff;
+  --color-blue-600: #fcee0a;
   --color-blue-700: #fcee0a;
   --color-blue-900: #ff003c;
 }
 
 /* Forest */
 [data-theme='forest'] {
-  --color-slate-100: #d1d5db;
+  --color-slate-100: #ffffff;
   --color-slate-200: #4b5563;
   --color-slate-300: #374151;
   --color-slate-400: #9ca3af;
-  --color-slate-500: #4b5563;
+  --color-slate-500: #9ca3af;
   --color-slate-600: #1f2937;
   --color-slate-700: #14532d;
   --color-slate-800: #052e16;
@@ -229,11 +254,11 @@
 
 /* Ocean */
 [data-theme='ocean'] {
-  --color-slate-100: #e0f2fe;
+  --color-slate-100: #f0f9ff;
   --color-slate-200: #7dd3fc;
   --color-slate-300: #38bdf8;
-  --color-slate-400: #38bdf8;
-  --color-slate-500: #0ea5e9;
+  --color-slate-400: #7dd3fc;
+  --color-slate-500: #7dd3fc;
   --color-slate-600: #0284c7;
   --color-slate-700: #0369a1;
   --color-slate-800: #075985;
@@ -247,18 +272,23 @@
   --color-blue-900: #0c4a6e;
 }
 
-/* Apple / Sleek */
+/* Apple / Sleek (Light) - Corrected Scale */
 [data-theme='apple'] {
-  --color-slate-50: #f5f5f7;
-  --color-slate-100: #ffffff;
-  --color-slate-200: #d2d2d7;
+  /* Backgrounds: Lightest */
+  --color-slate-50: #f5f5f7;  /* Main BG */
+  --color-slate-100: #ffffff; /* Button/Card BG */
+  --color-slate-200: #d2d2d7; /* Borders */
+  
+  /* Midtones */
   --color-slate-300: #86868b;
-  --color-slate-400: #86868b;
-  --color-slate-500: #6e6e73;
-  --color-slate-600: #1d1d1f;
+  --color-slate-400: #86868b; /* Subtext */
+  
+  /* Text: Darkest */
+  --color-slate-500: #6e6e73; 
+  --color-slate-600: #1d1d1f; /* User Button Text */
   --color-slate-700: #1d1d1f;
-  --color-slate-800: #1d1d1f;
-  --color-slate-900: #1d1d1f;
+  --color-slate-800: #1d1d1f; /* Titles */
+  --color-slate-900: #000000; /* Nav Brand */
   --color-slate-950: #000000;
 
   --color-blue-100: #d0e8ff;
