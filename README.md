@@ -114,5 +114,5 @@ Este projeto está sob a licença MIT.
 - [x] **Landing Page**: Página de apresentação criada.
 - [x] **Deploy em Containers**: Configuração final do Docker para a aplicação (Dockerfile da app) - _O banco já está containerizado._
 - [x] **Notificações (Toasts)**: Melhorar feedback visual de erros/sucesso.
-- [ ] **Inserir ícones.** Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
+- [x] **Inserir ícones.** Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
 - [ ] **Inserir abas.**

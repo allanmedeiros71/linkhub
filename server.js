@@ -165,6 +165,9 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='link_tags' AND column_name='order_index') THEN
           ALTER TABLE link_tags ADD COLUMN order_index INTEGER DEFAULT 0;
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='icon_url') THEN
+          ALTER TABLE links ADD COLUMN icon_url TEXT;
+        END IF;
         ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
         ALTER TABLE users ALTER COLUMN email DROP NOT NULL; 
       END $$;
@@ -645,7 +648,7 @@ app.get("/api/links/:userId", ensureAuthenticated, async (req, res) => {
 });
 
 app.post("/api/links", ensureAuthenticated, async (req, res) => {
-  const { user_id, title, url, order_index, tags } = req.body;
+  const { user_id, title, url, icon_url, order_index, tags } = req.body;
   if (parseInt(user_id) !== req.user.id)
     return res.status(403).json({ error: "Forbidden" });
 
@@ -654,8 +657,8 @@ app.post("/api/links", ensureAuthenticated, async (req, res) => {
   try {
     await client.query('BEGIN');
     const result = await client.query(
-      "INSERT INTO links (user_id, title, url, order_index) VALUES ($1, $2, $3, $4) RETURNING *",
-      [user_id, title, url, order_index],
+      "INSERT INTO links (user_id, title, url, icon_url, order_index) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [user_id, title, url, icon_url, order_index],
     );
     const link = result.rows[0];
 
@@ -693,15 +696,15 @@ app.post("/api/links", ensureAuthenticated, async (req, res) => {
 });
 
 app.put("/api/links/:id", ensureAuthenticated, async (req, res) => {
-  const { title, url, order_index, tags } = req.body;
+  const { title, url, icon_url, order_index, tags } = req.body;
   
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     const result = await client.query(
-      "UPDATE links SET title = $1, url = $2, order_index = $3 WHERE id = $4 AND user_id = $5 RETURNING *",
-      [title, url, order_index, req.params.id, req.user.id],
+      "UPDATE links SET title = $1, url = $2, icon_url = $3, order_index = $4 WHERE id = $5 AND user_id = $6 RETURNING *",
+      [title, url, icon_url, order_index, req.params.id, req.user.id],
     );
     
     if (result.rows.length === 0) {

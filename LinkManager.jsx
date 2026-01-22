@@ -83,7 +83,7 @@ function SortableCard({ id, link, onEdit, onDelete, isOverlay }) {
     >
       <div className="shrink-0">
         <img
-          src={`https://www.google.com/s2/favicons?domain=${link.url}&sz=128`}
+          src={link.icon_url || `https://www.google.com/s2/favicons?domain=${link.url}&sz=128`}
           className="w-14 h-14 object-contain rounded-xl border border-transparent dark:border-slate-600 bg-white"
           alt="favicon"
           onError={(e) => {
@@ -442,6 +442,7 @@ export default function LinkManager() {
       user_id: user.id,
       title: formData.get("title"),
       url: formData.get("url"),
+      icon_url: formData.get("icon_url"),
       order_index: editingLink ? editingLink.order_index : links.length,
       tags: selectedTags
     };
@@ -1219,6 +1220,13 @@ export default function LinkManager() {
                 placeholder="URL"
                 type="url"
                 required
+                className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
+              <input
+                name="icon_url"
+                defaultValue={editingLink?.icon_url}
+                placeholder="URL do Ícone (Opcional)"
+                type="url"
                 className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
               />
               
