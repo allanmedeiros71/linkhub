@@ -40,22 +40,22 @@ export default function ProjectStatus() {
     },
     {
       icon: <Layout className="w-6 h-6 text-blue-500" />,
-      title: "Interface Moderna",
+      title: "Abas & Categorias",
       description:
-        "Design limpo e responsivo utilizando Tailwind CSS e Lucide Icons.",
-      status: "Implementado",
+        "Organize seus links em abas personalizadas e categorias coloridas.",
+      status: "Novo",
     },
     {
       icon: <Move className="w-6 h-6 text-purple-500" />,
-      title: "Drag & Drop",
-      description: "Reordenação intuitiva dos seus links favoritos.",
-      status: "Implementado",
+      title: "Drag & Drop Total",
+      description: "Reordene abas, categorias e links arrastando e soltando.",
+      status: "Aprimorado",
     },
     {
       icon: <Zap className="w-6 h-6 text-yellow-500" />,
-      title: "Performance Real-time",
+      title: "UX Refinada",
       description:
-        "Operações instantâneas e persistência de dados em PostgreSQL.",
+        "Modais de confirmação modernos, temas variados e interações fluidas.",
       status: "Implementado",
     },
   ];
@@ -92,16 +92,14 @@ export default function ProjectStatus() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
             </span>
-            Status do Projeto: Ativo
+            Status do Projeto: Ativo & Evoluindo
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
-            Gerencie seus links com <br className="hidden md:block" /> estilo e
-            simplicidade.
+            Gerencie seus links com <br className="hidden md:block" /> organização suprema.
           </h1>
           <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            O LinkHub é a solução centralizada para organizar, acessar e
-            compartilhar seus recursos web favoritos. Construído com as
-            tecnologias mais modernas do mercado.
+            O LinkHub evoluiu. Agora com suporte a múltiplas abas, categorização inteligente
+            e uma experiência de usuário totalmente renovada.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -130,14 +128,14 @@ export default function ProjectStatus() {
 
             <div className="relative text-center mb-10">
               <span className="inline-block py-1 px-3 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-xs font-bold uppercase tracking-wider mb-3">
-                Preview da Interface
+                Nova Interface v2.0
               </span>
               <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-4">
-                Simplicidade e Poder
+                Poder Organizacional
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
-                Uma interface desenhada para focar no que importa: seus links.
-                Visual limpo, modo escuro nativo e interações fluidas.
+                Navegue entre abas, gerencie categorias com cores personalizadas e 
+                arraste tudo para onde quiser. Uma interface pensada para produtividade.
               </p>
             </div>
 
@@ -227,7 +225,11 @@ export default function ProjectStatus() {
 
       {/* Footer */}
       <footer className="py-12 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-sm">
-        <p>© 2026 LinkHub Project. Todos os direitos reservados.</p>
+        <p>
+          Desenvolvido com ❤️ por <a href="https://github.com/allanmedeiros71" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors">Allan Medeiros</a>.
+          <br className="md:hidden" /> 
+          Código aberto sob a licença MIT.
+        </p>
       </footer>
     </div>
   );
