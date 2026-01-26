@@ -198,6 +198,41 @@ function SortableTagSection({ tag, count, children, collapsedCategories, setColl
   );
 }
 
+function SortableTab({ tab, isActive, onClick, onDoubleClick }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: `tab-${tab.id}` });
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <button
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-grab active:cursor-grabbing ${
+                isActive
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-lg scale-105"
+                : "bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+        >
+            {tab.name}
+        </button>
+    );
+}
+
 export default function LinkManager() {
   const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
@@ -436,6 +471,7 @@ export default function LinkManager() {
           setEditingTag(null);
           setIsTagModalOpen(false);
           fetchTags();
+          fetchLinks(); // Refresh links to update the 'tags' array in local state
       } catch (err) {
           toast.error("Erro ao remover categoria.");
       }
@@ -624,6 +660,36 @@ export default function LinkManager() {
     setActiveId(null);
     
     if (!over) return;
+
+    // Handle Tab Reordering
+    if (active.id.toString().startsWith('tab-') && over.id.toString().startsWith('tab-')) {
+        const activeTabId = parseInt(active.id.toString().split('-')[1]);
+        const overTabId = parseInt(over.id.toString().split('-')[1]);
+
+        if (activeTabId !== overTabId) {
+            const oldIndex = tabs.findIndex(t => t.id === activeTabId);
+            const newIndex = tabs.findIndex(t => t.id === overTabId);
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+                const newTabs = arrayMove(tabs, oldIndex, newIndex);
+                setTabs(newTabs);
+
+                try {
+                    const tabIds = newTabs.map(t => t.id);
+                    await fetch(`${API_URL}/tabs/0/reorder`, {
+                         method: "PUT",
+                         headers: { "Content-Type": "application/json" },
+                         credentials: "include",
+                         body: JSON.stringify({ tabIds })
+                    });
+                } catch (e) {
+                    fetchTabs();
+                    toast.error("Erro ao reordenar abas");
+                }
+            }
+        }
+        return;
+    }
 
     // Handle Category Reordering
     if (active.id.toString().startsWith('category-')) {
@@ -948,23 +1014,30 @@ export default function LinkManager() {
                   >
                     Todas
                   </button>
-                  {tabs.map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTabId(tab.id)}
-                        onDoubleClick={() => {
-                            setEditingTab(tab);
-                            setIsTabModalOpen(true);
-                        }}
-                        className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                            activeTabId === tab.id
-                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-lg scale-105"
-                            : "bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                        }`}
-                      >
-                        {tab.name}
-                      </button>
-                  ))}
+                   <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCorners}
+                      onDragStart={(event) => setActiveId(event.active.id)}
+                      onDragEnd={handleDragEnd}
+                   >
+                        <SortableContext
+                            items={tabs.map(t => `tab-${t.id}`)}
+                            strategy={rectSortingStrategy}
+                        >
+                              {tabs.map(tab => (
+                                  <SortableTab
+                                    key={tab.id}
+                                    tab={tab}
+                                    isActive={activeTabId === tab.id}
+                                    onClick={() => setActiveTabId(tab.id)}
+                                    onDoubleClick={() => {
+                                        setEditingTab(tab);
+                                        setIsTabModalOpen(true);
+                                    }}
+                                  />
+                              ))}
+                        </SortableContext>
+                   </DndContext>
                   <button
                     onClick={() => {
                         setEditingTab(null);
@@ -1342,6 +1415,18 @@ export default function LinkManager() {
 
                                                 );
 
+                                            }
+                                            
+                                            // Handle Tab Overlay
+                                            if (strId.startsWith('tab-')) {
+                                                const tabId = parseInt(strId.split('-')[1]);
+                                                const tab = tabs.find(t => t.id === tabId);
+                                                if (!tab) return null;
+                                                return (
+                                                    <div className="whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl scale-105 opacity-90 cursor-grabbing">
+                                                        {tab.name}
+                                                    </div>
+                                                );
                                             }
 
                         

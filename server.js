@@ -588,6 +588,35 @@ app.delete("/api/tabs/:id", ensureAuthenticated, async (req, res) => {
     }
 });
 
+app.put("/api/tabs/:id/reorder", ensureAuthenticated, async (req, res) => {
+    const { tabIds } = req.body;
+    
+    if (!Array.isArray(tabIds)) {
+        return res.status(400).json({ error: "tabIds must be an array" });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        for (let i = 0; i < tabIds.length; i++) {
+            const tabId = tabIds[i];
+            await client.query(
+                "UPDATE tabs SET order_index = $1 WHERE id = $2 AND user_id = $3",
+                [i, tabId, req.user.id]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ message: "Tabs reordered" });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 // --- TAGS API ---
 
 app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
