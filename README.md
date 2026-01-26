@@ -115,4 +115,40 @@ Este projeto está sob a licença MIT.
 - [x] **Deploy em Containers**: Configuração final do Docker para a aplicação (Dockerfile da app) - _O banco já está containerizado._
 - [x] **Notificações (Toasts)**: Melhorar feedback visual de erros/sucesso.
 - [x] **Inserir ícones.** Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
-- [ ] **Inserir abas.**
+- [x] **Inserir abas.**
+
+## 🚀 Sugestões Estratégicas para o Projeto
+
+Com base no estado atual do projeto (que já possui autenticação, abas, categorias, drag & drop e temas), aqui estão algumas sugestões divididas por complexidade e impacto:
+
+### 1. Funcionalidades de Automação (Alta Prioridade)
+
+**Coleta Automática de Metadados (Web Scraping):**
+
+- **Como é hoje:** O usuário precisa digitar o título e colar a URL da imagem.
+- **Melhoria:** Ao colar um link (ex: `https://youtube.com`), o backend acessa a página, extrai o `<title>`, a `meta description` e a imagem `og:image` automaticamente. Isso melhora drasticamente a experiência de adicionar links.
+
+### 2. Expansão para "Social" / Compartilhamento
+
+- **Perfis Públicos (Estilo Linktree):**
+  - Permitir que o usuário torne uma **Aba** específica (ou o perfil todo) pública.
+  - Gerar uma URL amigável (ex: `linkhub.app/allan`) para usar em bios de redes sociais.
+- **Compartilhamento de Categorias:**
+  - Opção de compartilhar apenas uma categoria específica com um amigo ou colega de trabalho via link secreto.
+
+### 3. Integração e Acessibilidade
+
+- **Importação/Exportação:**
+  - Permitir importar favoritos do navegador (arquivo HTML) para facilitar a migração de novos usuários.
+  - Permitir exportar os dados (JSON/CSV) para garantir que o usuário é dono dos dados (**Data Ownership**).
+- **Extensão para Navegador:**
+  - Criar uma extensão simples para Chrome/Firefox que adiciona o site atual ao LinkHub com um clique.
+
+### 4. Melhorias Técnicas e de UX
+
+- **PWA (Progressive Web App):**
+  - Configurar o `manifest.json` e Service Workers para que o site possa ser instalado como um aplicativo no celular e funcionar (parcialmente) offline.
+- **Menu de Contexto (Botão Direito):**
+  - Ao clicar com o botão direito em um card, abrir um menu personalizado com opções rápidas: _"Mover para aba..."_, _"Editar"_, _"Duplicar"_, _"Copiar URL"_.
+- **Busca Global (Cmd+K):**
+  - Implementar uma **Command Palette** para navegar entre abas ou buscar links rapidamente sem usar o mouse.

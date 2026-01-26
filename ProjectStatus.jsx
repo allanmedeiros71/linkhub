@@ -7,7 +7,12 @@ import {
   Shield,
   Layout,
   Move,
-  Code2
+  Code2,
+  Rocket,
+  Wand2,
+  Share2,
+  Globe,
+  Smartphone
 } from "lucide-react";
 import DemoGestorLinks from "./demo_gestor_links";
 
@@ -191,6 +196,70 @@ export default function ProjectStatus() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roadmap Section */}
+      <section className="py-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+           <h2 className="text-3xl font-black mb-12 flex items-center justify-center gap-3">
+            <Rocket className="text-purple-500" />
+            Próximos Passos (Roadmap)
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+             {/* Item 1 */}
+             <div className="flex gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                <div className="shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <Wand2 size={22} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg mb-1">Metadados Automáticos</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Preenchimento mágico de títulos, descrições e ícones apenas colando a URL.
+                    </p>
+                </div>
+             </div>
+
+             {/* Item 2 */}
+             <div className="flex gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                <div className="shrink-0 w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center">
+                    <Share2 size={22} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg mb-1">Perfis Públicos</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Transforme suas abas favoritas em uma página pública compartilhável estilo "Linktree".
+                    </p>
+                </div>
+             </div>
+
+             {/* Item 3 */}
+             <div className="flex gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                <div className="shrink-0 w-12 h-12 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center">
+                    <Globe size={22} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg mb-1">Internacionalização</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Suporte global com múltiplos idiomas (i18n), começando com Inglês, Espanhol e Português.
+                    </p>
+                </div>
+             </div>
+
+             {/* Item 4 */}
+             <div className="flex gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:scale-[1.02] transition-transform duration-300 shadow-sm">
+                <div className="shrink-0 w-12 h-12 bg-pink-100 dark:bg-pink-900/30 text-pink-600 rounded-2xl flex items-center justify-center">
+                    <Smartphone size={22} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg mb-1">PWA & Offline</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Instale como aplicativo nativo no iOS/Android e acesse seus links mesmo sem internet.
+                    </p>
+                </div>
+             </div>
           </div>
         </div>
       </section>
