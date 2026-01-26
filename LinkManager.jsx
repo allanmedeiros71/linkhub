@@ -462,7 +462,7 @@ export default function LinkManager() {
       setConfirmationModal({
           isOpen: true,
           title: "Excluir Aba",
-          message: "Excluir esta aba? As categorias nela ficarão sem aba.",
+          message: "Excluir esta aba? As categorias vinculadas serão mantidas e ficarão visíveis na aba 'Todas'.",
           isDanger: true,
           confirmText: "Excluir",
           onConfirm: async () => {

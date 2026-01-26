@@ -575,16 +575,30 @@ app.put("/api/tabs/:id", ensureAuthenticated, async (req, res) => {
 });
 
 app.delete("/api/tabs/:id", ensureAuthenticated, async (req, res) => {
+    const client = await pool.connect();
     try {
-        // Upon deleting a tab, tags will have tab_id set to NULL (ON DELETE SET NULL)
-        const result = await pool.query(
+        await client.query('BEGIN');
+        
+        // Manually decouple tags to ensure they are not deleted even if FK constraint is wrong
+        await client.query("UPDATE tags SET tab_id = NULL WHERE tab_id = $1 AND user_id = $2", [req.params.id, req.user.id]);
+
+        const result = await client.query(
             "DELETE FROM tabs WHERE id = $1 AND user_id = $2 RETURNING *",
             [req.params.id, req.user.id]
         );
-        if (result.rowCount === 0) return res.status(404).json({ error: "Tab not found" });
+        
+        if (result.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: "Tab not found" });
+        }
+
+        await client.query('COMMIT');
         res.json({ message: "Tab deleted" });
     } catch (err) {
+        await client.query('ROLLBACK');
         res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 
