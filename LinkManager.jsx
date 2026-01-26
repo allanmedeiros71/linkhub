@@ -233,6 +233,40 @@ function SortableTab({ tab, isActive, onClick, onDoubleClick }) {
     );
 }
 
+function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmar", cancelText = "Cancelar", isDanger = false }) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300">
+                <h2 className="font-black text-xl mb-2 dark:text-white">{title}</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium leading-relaxed">{message}</p>
+                <div className="flex gap-4">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3.5 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors"
+                    >
+                        {cancelText}
+                    </button>
+                    <button
+                        onClick={() => {
+                            onConfirm();
+                            onClose();
+                        }}
+                        className={`flex-1 py-3.5 text-white rounded-2xl font-bold shadow-lg transition-all ${
+                            isDanger 
+                            ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" 
+                            : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                        }`}
+                    >
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function LinkManager() {
   const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
@@ -249,6 +283,7 @@ export default function LinkManager() {
   const [editingLink, setEditingLink] = useState(null);
   const [editingTab, setEditingTab] = useState(null);
   const [editingTag, setEditingTag] = useState(null);
+  const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, title: "", message: "", onConfirm: () => {}, isDanger: false });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -423,17 +458,25 @@ export default function LinkManager() {
     }
   };
 
-  const handleDeleteTab = async (id) => {
-      if(!confirm("Excluir esta aba? As categorias nela ficarão sem aba.")) return;
-      try {
-          await fetch(`${API_URL}/tabs/${id}`, { method: "DELETE", credentials: "include" });
-          toast.success("Aba removida");
-          if (activeTabId === id) setActiveTabId("all");
-          fetchTabs();
-          fetchTags(); // Tags might be updated (tab_id set to null)
-      } catch (err) {
-          toast.error("Erro ao remover aba.");
-      }
+  const handleDeleteTab = (id) => {
+      setConfirmationModal({
+          isOpen: true,
+          title: "Excluir Aba",
+          message: "Excluir esta aba? As categorias nela ficarão sem aba.",
+          isDanger: true,
+          confirmText: "Excluir",
+          onConfirm: async () => {
+              try {
+                  await fetch(`${API_URL}/tabs/${id}`, { method: "DELETE", credentials: "include" });
+                  toast.success("Aba removida");
+                  if (activeTabId === id) setActiveTabId("all");
+                  fetchTabs();
+                  fetchTags(); 
+              } catch (err) {
+                  toast.error("Erro ao remover aba.");
+              }
+          }
+      });
   };
 
   const handleUpdateTag = async (e) => {
@@ -463,21 +506,30 @@ export default function LinkManager() {
       }
   };
   
-  const handleDeleteTag = async (id) => {
-      if(!confirm("Excluir esta categoria?")) return;
-      try {
-          await fetch(`${API_URL}/tags/${id}`, { method: "DELETE", credentials: "include" });
-          toast.success("Categoria removida");
-          setEditingTag(null);
-          setIsTagModalOpen(false);
-          fetchTags();
-          fetchLinks(); // Refresh links to update the 'tags' array in local state
-      } catch (err) {
-          toast.error("Erro ao remover categoria.");
-      }
+  const handleDeleteTag = (id) => {
+      setConfirmationModal({
+          isOpen: true,
+          title: "Excluir Categoria",
+          message: "Excluir esta categoria? Os links serão movidos para 'Sem Categoria'.",
+          isDanger: true,
+          confirmText: "Excluir",
+          onConfirm: async () => {
+              try {
+                  await fetch(`${API_URL}/tags/${id}`, { method: "DELETE", credentials: "include" });
+                  toast.success("Categoria removida");
+                  setEditingTag(null);
+                  setIsTagModalOpen(false);
+                  fetchTags();
+                  fetchLinks(); 
+              } catch (err) {
+                  toast.error("Erro ao remover categoria.");
+              }
+          }
+      });
   };
 
   const handleUpdateProfile = async (e) => {
+    // ... code ... (unchanged)
     e.preventDefault();
     const formData = new FormData(e.target);
     const updateData = {};
@@ -516,6 +568,8 @@ export default function LinkManager() {
     }
   };
 
+  // ... (Login logic unchanged)
+  
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -541,6 +595,7 @@ export default function LinkManager() {
     }
   };
 
+  // ... (Logout, Theme logic unchanged)
   const handleLogout = async () => {
     try {
       await fetch(`${API_URL}/logout`, { method: "POST", credentials: "include" });
@@ -644,15 +699,23 @@ export default function LinkManager() {
     }
   };
 
-  const handleDeleteLink = async (id) => {
-    if (!window.confirm("Excluir link?")) return;
-    try {
-        await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
-        toast.success("Link removido!");
-        fetchLinks();
-    } catch (err) {
-        toast.error("Erro ao excluir link.");
-    }
+  const handleDeleteLink = (id) => {
+      setConfirmationModal({
+          isOpen: true,
+          title: "Excluir Link",
+          message: "Tem certeza que deseja excluir este link?",
+          isDanger: true,
+          confirmText: "Excluir",
+          onConfirm: async () => {
+              try {
+                  await fetch(`${API_URL}/links/${id}`, { method: "DELETE", credentials: "include" });
+                  toast.success("Link removido!");
+                  fetchLinks();
+              } catch (err) {
+                  toast.error("Erro ao excluir link.");
+              }
+          }
+      });
   };
 
   const handleDragEnd = async (event) => {
@@ -1517,6 +1580,17 @@ export default function LinkManager() {
           </form>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText={confirmationModal.confirmText}
+        isDanger={confirmationModal.isDanger}
+      />
 
       {/* Tag Edit Modal */}
       {isTagModalOpen && editingTag && (
