@@ -138,7 +138,7 @@ function SortableCard({ id, link, onEdit, onDelete, isOverlay }) {
   );
 }
 
-function SortableTagSection({ tag, count, children, collapsedCategories, setCollapsedCategories }) {
+function SortableTagSection({ tag, count, children, collapsedCategories, setCollapsedCategories, onEdit }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `category-${tag.id}` });
   
   const style = {
@@ -153,24 +153,46 @@ function SortableTagSection({ tag, count, children, collapsedCategories, setColl
 
   return (
     <div ref={setNodeRef} style={style} className="bg-white/80 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <button 
-            {...attributes} 
-            {...listeners}
-            onClick={() => {
-                const newSet = new Set(collapsedCategories);
-                if (isCollapsed) newSet.delete(tag.id);
-                else newSet.add(tag.id);
-                setCollapsedCategories(newSet);
-            }}
-            className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-grab active:cursor-grabbing"
+        <div 
+            className="w-full flex items-center justify-between p-4 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
-             <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                {tag.name}
-                <span className="text-xs font-normal text-slate-400 ml-2">({count})</span>
-            </h3>
-            {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
-        </button>
+             <button 
+                {...attributes} 
+                {...listeners}
+                onClick={() => {
+                    const newSet = new Set(collapsedCategories);
+                    if (isCollapsed) newSet.delete(tag.id);
+                    else newSet.add(tag.id);
+                    setCollapsedCategories(newSet);
+                }}
+                className="flex-1 flex items-center gap-2 cursor-grab active:cursor-grabbing text-left"
+             >
+                <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                    {tag.name}
+                    <span className="text-xs font-normal text-slate-400 ml-2">({count})</span>
+                </h3>
+             </button>
+             
+             <div className="flex items-center gap-2">
+                 <button 
+                    onClick={(e) => { e.stopPropagation(); onEdit(tag); }}
+                    className="p-1.5 text-slate-400 hover:text-blue-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-all"
+                 >
+                    <Settings size={14} />
+                 </button>
+                 <button
+                    onClick={() => {
+                        const newSet = new Set(collapsedCategories);
+                        if (isCollapsed) newSet.delete(tag.id);
+                        else newSet.add(tag.id);
+                        setCollapsedCategories(newSet);
+                    }}
+                 >
+                    {isCollapsed ? <ChevronRight size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                 </button>
+             </div>
+        </div>
         {!isCollapsed && children}
     </div>
   );
@@ -180,12 +202,18 @@ export default function LinkManager() {
   const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
   const [tags, setTags] = useState([]);
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState("all");
   const [selectedTagIds, setSelectedTagIds] = useState(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState(new Set());
   const [activeId, setActiveId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTabModalOpen, setIsTabModalOpen] = useState(false);
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
+  const [editingTab, setEditingTab] = useState(null);
+  const [editingTag, setEditingTag] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -261,6 +289,7 @@ export default function LinkManager() {
       }
       fetchLinks();
       fetchTags();
+      fetchTabs();
     }
   }, [user]);
 
@@ -290,6 +319,18 @@ export default function LinkManager() {
     }
   };
 
+  const fetchTabs = async () => {
+    try {
+        const response = await fetch(`${API_URL}/tabs/${user.id}`, { credentials: "include" });
+        if (response.ok) {
+            const data = await response.json();
+            setTabs(data);
+        }
+    } catch (err) {
+        console.error("Failed to fetch tabs");
+    }
+  };
+
   const fetchLinks = async () => {
     setError(null);
     try {
@@ -300,6 +341,104 @@ export default function LinkManager() {
     } catch (err) {
       setError("Erro ao conectar ao servidor.");
     }
+  };
+
+  const handleCreateTab = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const name = formData.get("name");
+    
+    try {
+        const response = await fetch(`${API_URL}/tabs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ name }),
+        });
+        if (response.ok) {
+            fetchTabs();
+            setIsTabModalOpen(false);
+            toast.success("Aba criada!");
+        }
+    } catch (err) {
+        toast.error("Erro ao criar aba.");
+    }
+  };
+
+  const handleUpdateTab = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const name = formData.get("name");
+    
+    try {
+        const response = await fetch(`${API_URL}/tabs/${editingTab.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ name }),
+        });
+        if (response.ok) {
+            fetchTabs();
+            setEditingTab(null);
+            setIsTabModalOpen(false);
+            toast.success("Aba atualizada!");
+        }
+    } catch (err) {
+        toast.error("Erro ao atualizar aba.");
+    }
+  };
+
+  const handleDeleteTab = async (id) => {
+      if(!confirm("Excluir esta aba? As categorias nela ficarão sem aba.")) return;
+      try {
+          await fetch(`${API_URL}/tabs/${id}`, { method: "DELETE", credentials: "include" });
+          toast.success("Aba removida");
+          if (activeTabId === id) setActiveTabId("all");
+          fetchTabs();
+          fetchTags(); // Tags might be updated (tab_id set to null)
+      } catch (err) {
+          toast.error("Erro ao remover aba.");
+      }
+  };
+
+  const handleUpdateTag = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const name = formData.get("name");
+      const color = formData.get("color");
+      const tab_id = formData.get("tab_id");
+      
+      const payload = { name, color, tab_id: tab_id ? parseInt(tab_id) : null };
+
+      try {
+          const response = await fetch(`${API_URL}/tags/${editingTag.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(payload),
+          });
+          if (response.ok) {
+              fetchTags();
+              setEditingTag(null);
+              setIsTagModalOpen(false);
+              toast.success("Categoria atualizada!");
+          }
+      } catch (err) {
+          toast.error("Erro ao atualizar categoria.");
+      }
+  };
+  
+  const handleDeleteTag = async (id) => {
+      if(!confirm("Excluir esta categoria?")) return;
+      try {
+          await fetch(`${API_URL}/tags/${id}`, { method: "DELETE", credentials: "include" });
+          toast.success("Categoria removida");
+          setEditingTag(null);
+          setIsTagModalOpen(false);
+          fetchTags();
+      } catch (err) {
+          toast.error("Erro ao remover categoria.");
+      }
   };
 
   const handleUpdateProfile = async (e) => {
@@ -796,14 +935,46 @@ export default function LinkManager() {
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 mt-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-              Meus Links
-            </h2>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.1em]">
-              Total: {links.length}
-            </p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="flex-1 w-full md:w-auto overflow-x-auto no-scrollbar mask-gradient">
+              <div className="flex items-center gap-2 p-1">
+                  <button
+                    onClick={() => setActiveTabId("all")}
+                    className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                        activeTabId === "all"
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-lg scale-105"
+                        : "bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  {tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTabId(tab.id)}
+                        onDoubleClick={() => {
+                            setEditingTab(tab);
+                            setIsTabModalOpen(true);
+                        }}
+                        className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                            activeTabId === tab.id
+                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-lg scale-105"
+                            : "bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        }`}
+                      >
+                        {tab.name}
+                      </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                        setEditingTab(null);
+                        setIsTabModalOpen(true);
+                    }}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <Plus size={16} />
+                  </button>
+              </div>
           </div>
           <button
             onClick={() => {
@@ -811,7 +982,7 @@ export default function LinkManager() {
               setSelectedTagIds(new Set());
               setIsModalOpen(true);
             }}
-            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 dark:shadow-none transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-sm"
+            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 dark:shadow-none transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-sm shrink-0"
           >
             <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
             <span>Novo Link</span>
@@ -833,7 +1004,7 @@ export default function LinkManager() {
                         {user?.view_mode === 'simple' ? (
 
                              /* Simple View */
-
+                             
                              <SortableContext
 
                                 items={filteredLinks.map((l) => l.id)}
@@ -844,7 +1015,15 @@ export default function LinkManager() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                                  {filteredLinks.map((link) => (
+                                  {/* In simple view, we might want to still respect tabs? 
+                                      The prompt says "Tabs must exist for both grouped and simple list view".
+                                      So we filter links based on tags that are in the active tab.
+                                  */}
+                                  {filteredLinks.filter(l => {
+                                      if (activeTabId === 'all') return true;
+                                      // Check if link has ANY tag in the active tab
+                                      return l.tags && l.tags.some(t => t.tab_id === activeTabId);
+                                  }).map((link) => (
 
                                     <SortableCard
 
@@ -872,9 +1051,9 @@ export default function LinkManager() {
 
                             <div className="space-y-6">
 
-                                {/* Uncategorized Links */}
+                                {/* Uncategorized Links - Only show in 'All' tab */}
 
-                                {(() => {
+                                {activeTabId === 'all' && (() => {
 
                                     const uncategorized = filteredLinks.filter(l => !l.tags || l.tags.length === 0);
 
@@ -960,7 +1139,7 @@ export default function LinkManager() {
 
                 
 
-                                                {/* Tagged Links */}
+                                                {/* Tagged Links - Filtered by Tab */}
 
                 
 
@@ -968,7 +1147,7 @@ export default function LinkManager() {
 
                 
 
-                                                    items={tags.map(t => `category-${t.id}`)} 
+                                                    items={tags.filter(t => activeTabId === 'all' || t.tab_id === activeTabId).map(t => `category-${t.id}`)} 
 
                 
 
@@ -980,7 +1159,7 @@ export default function LinkManager() {
 
                 
 
-                                                                                        {tags.map(tag => {
+                                                                                        {tags.filter(t => activeTabId === 'all' || t.tab_id === activeTabId).map(tag => {
 
                 
 
@@ -1054,7 +1233,10 @@ export default function LinkManager() {
 
                                                                                                     setCollapsedCategories={setCollapsedCategories}
 
-                
+                                                                                                    onEdit={(tag) => {
+                                                                                                        setEditingTag(tag);
+                                                                                                        setIsTagModalOpen(true);
+                                                                                                    }}
 
                                                                                                 >
 
@@ -1196,6 +1378,133 @@ export default function LinkManager() {
 
                 </DndContext>
       </main>
+
+      {/* Tab Modal */}
+      {isTabModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <form
+            onSubmit={editingTab ? handleUpdateTab : handleCreateTab}
+            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300"
+          >
+            <h2 className="font-black text-xl mb-6 dark:text-white">
+              {editingTab ? "Editar Aba" : "Nova Aba"}
+            </h2>
+            <div className="space-y-4">
+              <input
+                name="name"
+                defaultValue={editingTab?.name}
+                placeholder="Nome da Aba"
+                required
+                autoFocus
+                className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
+            </div>
+             <div className="flex gap-4 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTabModalOpen(false);
+                  setEditingTab(null);
+                }}
+                className="flex-1 py-4 text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors"
+              >
+                Cancelar
+              </button>
+              {editingTab && (
+                 <button
+                    type="button"
+                    onClick={() => {
+                        handleDeleteTab(editingTab.id);
+                        setIsTabModalOpen(false);
+                    }}
+                    className="flex-1 py-4 bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-2xl font-bold hover:bg-red-200 transition-all"
+                  >
+                    Excluir
+                  </button>
+              )}
+              <button
+                type="submit"
+                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all"
+              >
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tag Edit Modal */}
+      {isTagModalOpen && editingTag && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <form
+            onSubmit={handleUpdateTag}
+            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-300"
+          >
+            <h2 className="font-black text-xl mb-6 dark:text-white">
+              Editar Categoria
+            </h2>
+            <div className="space-y-4">
+              <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nome</label>
+                  <input
+                    name="name"
+                    defaultValue={editingTag?.name}
+                    placeholder="Nome da Categoria"
+                    required
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  />
+              </div>
+              
+              <div>
+                 <label className="text-xs font-bold text-slate-400 uppercase ml-1">Cor</label>
+                 <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                     <input type="color" name="color" defaultValue={editingTag?.color} className="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent" />
+                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Escolha uma cor</span>
+                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Aba (Grupo)</label>
+                <select
+                  name="tab_id"
+                  defaultValue={editingTag?.tab_id || ""}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                    <option value="">Sem Aba (Todas)</option>
+                    {tabs.map(tab => (
+                        <option key={tab.id} value={tab.id}>{tab.name}</option>
+                    ))}
+                </select>
+              </div>
+            </div>
+             <div className="flex gap-4 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTagModalOpen(false);
+                  setEditingTag(null);
+                }}
+                className="flex-1 py-4 text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors"
+              >
+                Cancelar
+              </button>
+               <button
+                    type="button"
+                    onClick={() => handleDeleteTag(editingTag.id)}
+                    className="flex-1 py-4 bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-2xl font-bold hover:bg-red-200 transition-all"
+                  >
+                    Excluir
+                  </button>
+              <button
+                type="submit"
+                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all"
+              >
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {(isModalOpen || editingLink) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">

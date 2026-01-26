@@ -114,6 +114,13 @@ const initDB = async () => {
         color VARCHAR(20) DEFAULT '#3b82f6'
       );
 
+      CREATE TABLE IF NOT EXISTS tabs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(50) NOT NULL,
+        order_index INTEGER DEFAULT 0
+      );
+
       CREATE TABLE IF NOT EXISTS link_tags (
         link_id INTEGER REFERENCES links(id) ON DELETE CASCADE,
         tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
@@ -161,6 +168,9 @@ const initDB = async () => {
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tags' AND column_name='order_index') THEN
           ALTER TABLE tags ADD COLUMN order_index INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tags' AND column_name='tab_id') THEN
+          ALTER TABLE tags ADD COLUMN tab_id INTEGER REFERENCES tabs(id) ON DELETE SET NULL;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='link_tags' AND column_name='order_index') THEN
           ALTER TABLE link_tags ADD COLUMN order_index INTEGER DEFAULT 0;
@@ -507,6 +517,77 @@ app.put("/api/users/:id/theme", ensureAuthenticated, async (req, res) => {
   }
 });
 
+// --- TABS API ---
+
+app.get("/api/tabs/:userId", ensureAuthenticated, async (req, res) => {
+    if (parseInt(req.params.userId) !== req.user.id)
+        return res.status(403).json({ error: "Forbidden" });
+
+    try {
+        const result = await pool.query(
+            "SELECT * FROM tabs WHERE user_id = $1 ORDER BY order_index ASC, id ASC",
+            [req.params.userId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/tabs", ensureAuthenticated, async (req, res) => {
+    const { name } = req.body;
+    try {
+        const maxOrder = await pool.query("SELECT MAX(order_index) as max FROM tabs WHERE user_id = $1", [req.user.id]);
+        const order_index = (maxOrder.rows[0].max || 0) + 1;
+
+        const result = await pool.query(
+            "INSERT INTO tabs (user_id, name, order_index) VALUES ($1, $2, $3) RETURNING *",
+            [req.user.id, name, order_index]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put("/api/tabs/:id", ensureAuthenticated, async (req, res) => {
+    const { name, order_index } = req.body;
+    try {
+        const fields = [];
+        const values = [];
+        let idx = 1;
+
+        if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
+        if (order_index !== undefined) { fields.push(`order_index = $${idx++}`); values.push(order_index); }
+
+        values.push(req.params.id);
+        values.push(req.user.id);
+
+        const query = `UPDATE tabs SET ${fields.join(", ")} WHERE id = $${idx++} AND user_id = $${idx} RETURNING *`;
+        
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) return res.status(404).json({error: "Tab not found"});
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete("/api/tabs/:id", ensureAuthenticated, async (req, res) => {
+    try {
+        // Upon deleting a tab, tags will have tab_id set to NULL (ON DELETE SET NULL)
+        const result = await pool.query(
+            "DELETE FROM tabs WHERE id = $1 AND user_id = $2 RETURNING *",
+            [req.params.id, req.user.id]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: "Tab not found" });
+        res.json({ message: "Tab deleted" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- TAGS API ---
 
 app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
@@ -525,15 +606,15 @@ app.get("/api/tags/:userId", ensureAuthenticated, async (req, res) => {
 });
 
 app.post("/api/tags", ensureAuthenticated, async (req, res) => {
-    const { name, color } = req.body;
+    const { name, color, tab_id } = req.body;
     try {
         // Obter o maior order_index
         const maxOrder = await pool.query("SELECT MAX(order_index) as max FROM tags WHERE user_id = $1", [req.user.id]);
         const order_index = (maxOrder.rows[0].max || 0) + 1;
 
         const result = await pool.query(
-            "INSERT INTO tags (user_id, name, color, order_index) VALUES ($1, $2, $3, $4) RETURNING *",
-            [req.user.id, name, color || '#3b82f6', order_index]
+            "INSERT INTO tags (user_id, name, color, order_index, tab_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [req.user.id, name, color || '#3b82f6', order_index, tab_id || null]
         );
         res.json(result.rows[0]);
     } catch (err) {
@@ -542,7 +623,7 @@ app.post("/api/tags", ensureAuthenticated, async (req, res) => {
 });
 
 app.put("/api/tags/:id", ensureAuthenticated, async (req, res) => {
-    const { name, color, order_index } = req.body;
+    const { name, color, order_index, tab_id } = req.body;
     try {
         const fields = [];
         const values = [];
@@ -551,6 +632,7 @@ app.put("/api/tags/:id", ensureAuthenticated, async (req, res) => {
         if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
         if (color !== undefined) { fields.push(`color = $${idx++}`); values.push(color); }
         if (order_index !== undefined) { fields.push(`order_index = $${idx++}`); values.push(order_index); }
+        if (tab_id !== undefined) { fields.push(`tab_id = $${idx++}`); values.push(tab_id); }
         
         values.push(req.params.id);
         values.push(req.user.id);

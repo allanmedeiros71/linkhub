@@ -297,3 +297,20 @@
   --color-blue-700: #0077ed;
   --color-blue-900: #003e7e;
 }
+
+/* Scroll Mask Gradient */
+.mask-gradient {
+  mask-image: linear-gradient(to right, transparent, black 10px, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black 90%, transparent);
+}
+
+/* Hide scrollbar for Chrome/Safari/Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
