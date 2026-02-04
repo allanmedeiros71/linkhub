@@ -35,72 +35,76 @@ Agora conta com uma **Landing Page** dedicada para apresentar o status do projet
 
 - **Node.js** & **Express**
 - **PostgreSQL** (Banco de dados)
+- **Redis** (Cache e Sessões)
 - **Passport.js** (Estratégias Google, GitHub e Local)
 - **Bcryptjs** (Hashing de senhas)
 - **Pg** (Cliente PostgreSQL)
 
-### DevOps
+### DevOps & Infraestrutura
 
-- **Docker** & **Docker Compose** (Containerização do Banco de Dados)
+- **Docker** & **Docker Compose**
+  - Builds Multi-stage (Dev/Prod)
+  - Healthchecks configurados
+  - Serviços orquestrados (App, DB, Redis)
 
 ## 📦 Como Rodar o Projeto
 
 ### Pré-requisitos
 
-- Node.js (v18+)
-- Docker e Docker Compose (para o banco de dados)
+- Docker e Docker Compose
+- Node.js (v18+) - *Apenas se optar por rodar o Node localmente*
 
-### Passo a Passo
+### Opção 1: Ambiente Completo com Docker (Recomendado)
+
+Esta opção roda toda a aplicação (Frontend, Backend, Banco e Redis) dentro de containers, garantindo o mesmo ambiente para todos os desenvolvedores.
 
 1. **Clone o repositório:**
-
    ```bash
    git clone https://github.com/seu-usuario/linkhub.git
    cd linkhub
    ```
 
-2. **Configure o Banco de Dados:**
-   Inicie o container do PostgreSQL:
-
+2. **Configure as Variáveis de Ambiente:**
+   Crie um arquivo `.env` na raiz:
    ```bash
-   docker-compose up -d
+   cp .env.sample .env
+   ```
+   *Ajuste as credenciais no arquivo `.env` se necessário.*
+
+3. **Configure o Modo Desenvolvimento:**
+   Crie o arquivo de override para expor portas e habilitar o live-reload:
+   ```bash
+   cp docker-compose.override.sample.yaml docker-compose.override.yaml
    ```
 
-3. **Configure as Variáveis de Ambiente:**
-   Crie um arquivo `.env` na raiz baseado no `.env.sample` (se houver) ou use as configurações abaixo:
-
-   ```env
-   DB_USER=user
-   DB_HOST=localhost
-   DB_NAME=linkhub
-   DB_PASSWORD=password
-   DB_PORT=5432
-   SESSION_SECRET=seu_segredo_super_secreto
-
-   # Opcional: Configuração OAuth (necessário para login social)
-   GOOGLE_CLIENT_ID=seu_client_id
-   GOOGLE_CLIENT_SECRET=seu_client_secret
-   GITHUB_CLIENT_ID=seu_client_id
-   GITHUB_CLIENT_SECRET=seu_client_secret
-   ```
-
-4. **Instale as dependências:**
-
+4. **Inicie a Aplicação:**
    ```bash
-   npm install
-   ```
-
-5. **Inicie a Aplicação:**
-   Para rodar tanto o servidor backend quanto o frontend (via `concurrently`):
-
-   ```bash
-   npm start
+   docker-compose up -d --build
    ```
 
    Acesse:
-   - **Landing Page:** `http://localhost:5173`
-   - **App:** `http://localhost:5173/app`
+   - **App:** `http://localhost:5173`
    - **API:** `http://localhost:5000`
+   - **Health Check:** `http://localhost:5000/health`
+
+### Opção 2: Híbrido (Node Local + Serviços Docker)
+
+Use esta opção se preferir rodar o Node.js na sua máquina host, usando o Docker apenas para os serviços de infraestrutura (Postgres e Redis).
+
+1. **Siga os passos 1 e 2 da Opção 1.**
+
+2. **Configure e Inicie os Serviços:**
+   É necessário usar o arquivo de override para expor a porta do banco de dados (5432) para sua máquina local.
+   ```bash
+   cp docker-compose.override.sample.yaml docker-compose.override.yaml
+   docker-compose up -d db redis
+   ```
+
+3. **Instale as dependências e inicie:**
+   ```bash
+   npm install
+   npm start
+   ```
 
 ## 📄 Licença
 
@@ -110,9 +114,12 @@ Este projeto está sob a licença MIT.
 
 - [x] **Autenticação Real**: Implementado login com Google, GitHub e Local (bcrypt).
 - [x] **Banco de Dados**: Migração de Firebase para PostgreSQL concluída.
+- [x] **Infraestrutura**:
+  - [x] **Dockerização Completa**: Multi-stage build para Dev e Prod.
+  - [x] **Redis**: Implementado para persistência de sessões.
+  - [x] **Health Checks**: Monitoramento de saúde dos containers.
 - [x] **Temas Dinâmicos**: Seletor de tema com persistência no banco de dados.
 - [x] **Landing Page**: Página de apresentação criada.
-- [x] **Deploy em Containers**: Configuração final do Docker para a aplicação (Dockerfile da app) - _O banco já está containerizado._
 - [x] **Notificações (Toasts)**: Melhorar feedback visual de erros/sucesso.
 - [x] **Inserir ícones.** Se houver ícone no banco, usá-lo, caso contrário, usar o da web fornecido pelo próprio app.
 - [x] **Inserir abas.**
