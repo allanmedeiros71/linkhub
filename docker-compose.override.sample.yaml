@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      target: development # Muda o alvo para o estágio de dev do Dockerfile
+    command: npx concurrently "node server.js" "npx vite --host 0.0.0.0"   # Sobrescreve o comando para rodar o Vite
+    ports:
+      - "5173:5173"        # Porta do Vite para você acessar no navegador
+      - "5000:5000"        # Porta da API Express
+    volumes:
+      - .:/app             # "Live Reload": alterou no VS Code, atualiza no container
+      - /app/node_modules  # Evita que o node_modules local sobrescreva o do container
+    environment:
+      - NODE_ENV=development
+
+  db:
+    ports:
+      - "5432:5432"        # Expõe o banco para você usar o DBeaver/TablePlus localmente

@@ -1,26 +1,36 @@
-# Use official Node.js image
-FROM node:22-alpine
-
-# Set working directory
+# 1. ESTÁGIO DE DEPENDÊNCIAS (Base)
+FROM node:22-alpine AS base
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# 2. ESTÁGIO DE DESENVOLVIMENTO (Usado localmente)
+FROM base AS development
 RUN npm install
-
-# Copy application source
 COPY . .
+# Porta do Vite para dev
+EXPOSE 5173 
+# Porta do Express para dev
+EXPOSE 5000 
+CMD ["npm", "run", "dev"]
 
-# Build the frontend
+# 3. ESTÁGIO DE BUILD (Transforma código em arquivos estáticos)
+FROM base AS build
+RUN npm install --include=dev
+COPY . .
 RUN npm run build
 
-# Expose port
-EXPOSE 5000
-
-# Set environment to production
+# 4. ESTÁGIO DE PRODUÇÃO (O que vai para a Hostinger)
+FROM node:22-alpine AS production
+WORKDIR /app
 ENV NODE_ENV=production
 
-# Start the server
-CMD ["npm", "run", "server"]
+# Copiamos apenas o necessário do estágio de build (segurança e leveza)
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/server.js ./
+
+# Instala apenas dependências de runtime (sem Vite, Tailwind, etc.)
+RUN npm install --omit=dev
+
+EXPOSE 5000
+CMD ["node", "server.js"]

@@ -31,3 +31,7 @@ yarn-error.log*
 
 # Firebase
 firebase-debug.log
+
+# Docker
+docker-compose.override.yaml
+
