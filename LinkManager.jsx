@@ -1115,7 +1115,12 @@ export default function LinkManager() {
           <button
             onClick={() => {
               setEditingLink(null);
-              setSelectedTagIds(new Set());
+              if (activeTabId !== 'all') {
+                const tabTags = tags.filter(t => t.tab_id === activeTabId).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+                setSelectedTagIds(tabTags.length > 0 ? new Set([tabTags[0].id]) : new Set());
+              } else {
+                setSelectedTagIds(new Set());
+              }
               setIsModalOpen(true);
             }}
             className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 dark:shadow-none transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-sm shrink-0"
