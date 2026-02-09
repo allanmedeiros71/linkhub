@@ -68,11 +68,12 @@ app.use(
     }),
     secret: process.env.SESSION_SECRET || "dev_secret",
     resave: false,
+    rolling: true,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === "production", 
       sameSite: "lax", // 'lax' é seguro o suficiente e funciona bem para auth em localhost e produção na maioria dos casos. 'none' exige secure: true.
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
     },
   }),
 );
