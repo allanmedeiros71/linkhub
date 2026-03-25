@@ -65,7 +65,7 @@ function SortableCard({ id, link, onEdit, onDelete, isOverlay }) {
 
   const handleCardClick = (e) => {
     if (e.target.closest("button")) return;
-    window.open(link.url, "_blank", "noopener,noreferrer");
+    window.location.href = link.url;
   };
 
   const cardClass = `group relative flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl border transition-all duration-200 ${
